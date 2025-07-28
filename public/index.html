@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 引入外部CSS样式文件 -->
+  <link rel="stylesheet" href="style.css"> 
+  <title>Financial Portfolio</title>
+</head>
+
+<body>
+  <div class="container">
+    <!-- 左侧栏：现金 & 投资列表 -->
+    <aside class="sidebar">
+      <div class="net-worth-card">
+        <h3>NET WORTH</h3>
+        <p class="net-worth-amount">$2,317,371.20</p>
+      </div>
+      <div class="cash-section">
+        <h4>CASH</h4>
+        <p class="cash-amount">$4,601.70</p>
+        <ul class="cash-list">
+          <li>Fidelity Cash Cash Management <span>2,291.90</span></li>
+          <li>Wells Fargo Checking <span>309.13</span></li>
+          <li>Wells Fargo Savings <span>2,000.67</span></li>
+        </ul>
+      </div>
+      <div class="investment-section">
+        <h4>INVESTMENT</h4>
+        <p class="investment-amount">$863,253.45</p>
+        <ul class="investment-list">
+          <li>Beneke Fabrications Skyler White 401k <span>16,231.00</span></li>
+          <li>Fidelity Cash Cash Management <span>2,291.90</span></li>
+          <li>Fidelity Fidelity Brokerage <span>53,185.79</span></li>
+          <li>Madrigal Electromotive Walter White 421k <span>16,838.00</span></li>
+          <li>Pershing IRA 1 <span>455,191.03</span></li>
+          <li>Pershing IRA 2 <span>90,472.35</span></li>
+          <li>Pershing Taxable <span>103,144.46</span></li>
+          <li>Saul Goodman And Saul Goodman 401k <span>75,001.96</span></li>
+          <li>Stock Options - Pand... Pandora <span>31,715.00</span></li>
+          <li>Stock Options - Zynga <span>3,205.98</span></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- 主内容区：净值、现金流 -->
+    <main class="main-content">
+      <section class="net-worth-chart">
+        <h2>Net Worth</h2>
+        <div class="net-worth-metrics">
+          <p>LAST 30 DAYS <span>$138,884</span></p>
+          <p>TODAY'S CHANGE <span>$3,432</span></p>
+        </div>
+        <!-- 模拟净值折线图容器，实际可结合ECharts/Chart.js等实现动态图表 -->
+        <div class="chart-placeholder net-worth-line"></div> 
+        <p class="net-worth-total">$2,317,371</p>
+      </section>
+
+      <section class="cash-flow">
+        <h2>Cash Flow</h2>
+        <p>LAST 30 DAYS</p>
+        <div class="flow-circles">
+          <div class="circle income">
+            <p>INCOME</p>
+            <span>$18,665</span>
+          </div>
+          <div class="circle spending">
+            <p>SPENDING</p>
+            <span>-$42,500</span>
+          </div>
+        </div>
+        <p class="net-cash-flow">Net: <span>-$23,834</span></p>
+      </section>
+    </main>
+
+    <!-- 右侧栏：市场动态、洞察 -->
+    <aside class="right-sidebar">
+      <section class="market-movers">
+        <h2>Market Movers</h2>
+        <div class="market-indices">
+          <span>S&P 500 <b>0.65%</b></span>
+          <span>DOW JONES <b>-0.72%</b></span>
+          <span>NASDAQ <b>0.14%</b></span>
+          <span>10-TR BOND <b>-2.96%</b></span>
+        </div>
+        <p>Your Holdings <span>0.14%</span></p>
+        <h3>YOUR GAINERS</h3>
+        <ul class="gainers-list">
+          <li>Apple Inc <span>2.53%</span></li>
+          <li>Firstenergy Corp <span>1.66%</span></li>
+          <li>Duke Energy Corp <span>1.42%</span></li>
+          <li>Northeast Utilities <span>0.95%</span></li>
+          <li>ITT Educational Services Inc <span>0.88%</span></li>
+        </ul>
+        <h3>YOUR LOSERS</h3>
+        <ul class="losers-list">
+          <li>Harris Teeter Supermarkets Inc <span>-2.61%</span></li>
+          <li>Gulfport Energy Corp <span>-2.01%</span></li>
+          <li>Microsoft Corp <span>-1.66%</span></li>
+          <li>Wells Fargo & Co <span>-1.57%</span></li>
+          <li>Eastman Chemical Co <span>-1.50%</span></li>
+        </ul>
+      </section>
+
+      <section class="insights">
+        <h2>Insights</h2>
+        <ul>
+          <li>Compared to our baseline portfolio, you are underweight in: International Stocks by (0.64%).</li>
+          <li>You are currently paying over $2408.34 per year in fees for mutual funds and ETFs.</li>
+          <li>You are projected to pay over $19017.22 in 20 years in management fees for mutual funds and ETFs.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <!-- 引入外部JavaScript文件，可用于动态渲染数据、交互逻辑等 -->
+  <script src="script.js"></script> 
+</body>
+
+</html>

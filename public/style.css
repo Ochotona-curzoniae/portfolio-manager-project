@@ -1,0 +1,154 @@
+/* 基础重置，统一浏览器默认样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+  }
+  
+  body {
+    background-color: #f4f4f4;
+    color: #333;
+    line-height: 1.6;
+  }
+  
+  /* 容器：控制整体布局，让内容居中并限制宽度 */
+  .container {
+    display: flex;
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #fff;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 左侧边栏：宽度占比、背景色等 */
+  .sidebar {
+    width: 25%;
+    padding: 20px;
+    border-right: 1px solid #eee;
+  }
+  
+  /* 右侧边栏：和左侧对称布局 */
+  .right-sidebar {
+    width: 25%;
+    padding: 20px;
+    border-left: 1px solid #eee;
+  }
+  
+  /* 主内容区：占据中间剩余空间 */
+  .main-content {
+    width: 50%;
+    padding: 20px;
+  }
+  
+  /* 卡片、模块通用样式：设置内边距、底部间距、边框等，让视觉更规整 */
+  .net-worth-card,
+  .cash-section,
+  .investment-section,
+  .net-worth-chart,
+  .cash-flow,
+  .market-movers,
+  .insights {
+    margin-bottom: 30px;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  /* 标题样式：突出层级 */
+  h2, h3, h4 {
+    margin-bottom: 10px;
+    color: #333;
+  }
+  
+  /* 金额、关键数据样式：让数字更醒目 */
+  .net-worth-amount,
+  .cash-amount,
+  .investment-amount,
+  .net-worth-total,
+  .net-cash-flow span {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #007bff; 
+  }
+  
+  /* 列表通用样式：去掉默认项目符号，调整间距 */
+  ul {
+    list-style: none;
+    margin-top: 10px;
+  }
+  
+  .cash-list li,
+  .investment-list li,
+  .gainers-list li,
+  .losers-list li {
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  /* 市场指数、涨跌幅样式：区分正负收益颜色 */
+  .market-indices span {
+    display: block;
+    margin-bottom: 5px;
+  }
+  .market-indices b {
+    color: #28a745; 
+  }
+  .market-indices b[style*="color"] {
+    color: #dc3545 !important; 
+  }
+  
+  /* 模拟图表占位：用背景色、圆角模拟，实际可替换为ECharts/Chart.js等真实图表 */
+  .chart-placeholder {
+    height: 200px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    margin: 10px 0;
+  }
+  .net-worth-line {
+    /* 可根据设计调整渐变、高度等，这里仅示例 */
+    background: linear-gradient(to right, #66b3ff, #99ccff);
+  }
+  
+  /* 现金流环形图样式：用简单CSS模拟圆环，实际可结合图表库实现动态效果 */
+  .flow-circles {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 0;
+  }
+  .circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+  }
+  .income {
+    background-color: #28a745; 
+  }
+  .spending {
+    background-color: #dc3545; 
+  }
+  
+  /* 响应式适配：小屏幕下（如手机）调整布局为纵向排列，提升可读性 */
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column;
+    }
+    .sidebar,
+    .main-content,
+    .right-sidebar {
+      width: 100%;
+      border: none;
+    }
+    .flow-circles {
+      flex-direction: column;
+      align-items: center;
+    }
+    .circle {
+      margin-bottom: 20px;
+    }
+  }
