@@ -1,5 +1,6 @@
-const mysql = require("mysql2/promise")
-require("dotenv").config()
+import mysql from "mysql2/promise"
+import dotenv from "dotenv"
+dotenv.config()
 
 const dbConfig = {
   host: process.env.DB_HOST || "localhost",
@@ -8,9 +9,7 @@ const dbConfig = {
   database: process.env.DB_NAME || "financial_dashboard",
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
+  queueLimit: 0
 }
 
 const pool = mysql.createPool(dbConfig)
@@ -28,4 +27,4 @@ async function testConnection() {
 
 testConnection()
 
-module.exports = pool
+export default pool
