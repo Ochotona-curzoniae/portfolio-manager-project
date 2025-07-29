@@ -1,11 +1,12 @@
 import express from 'express'
 import mysql from 'mysql2'
-
+import overviewRouter from './overview.js'
 
 const app = express();
 app.use(express.json());
 app.use(express.static("public"));
-
+app.use('/api', overviewRouter)
+console.log(app);
 app.get('/api/networth/:days', async (req, res) => {
     try {
       // 3. .THEN/.CATCH EXAMPLE: Alternative to async/await
