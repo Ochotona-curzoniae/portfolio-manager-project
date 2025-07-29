@@ -17,7 +17,7 @@
       </template>
       <p class="section-subtitle">搜索股票代码或公司名称</p>
       <el-row :gutter="12">
-        <el-col :span="18">
+        <el-col :span="6">
           <el-input
             v-model="searchQuery"
             placeholder="输入股票代码或公司名称"
@@ -61,23 +61,23 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="symbol" label="代码" width="100">
+        <el-table-column prop="symbol" label="代码">
           <template #default="{ row }">
             <div class="stock-symbol">{{ row.symbol }}</div>
             <div class="stock-name">{{ row.name }}</div>
           </template>
         </el-table-column>
         
-        <el-table-column prop="volume" label="成交量" width="120" />
-        <el-table-column prop="marketCap" label="市值" width="120" />
+        <el-table-column prop="volume" label="成交量" />
+        <el-table-column prop="marketCap" label="市值" />
         
-        <el-table-column prop="price" label="当前价格" width="120">
+        <el-table-column prop="price" label="当前价格">
           <template #default="{ row }">
             <div class="current-price">{{ row.price }}</div>
           </template>
         </el-table-column>
         
-        <el-table-column prop="change" label="涨跌幅" width="120">
+        <el-table-column prop="change" label="涨跌幅">
           <template #default="{ row }">
             <el-tag 
               :type="row.change > 0 ? 'success' : 'danger'"
@@ -154,8 +154,11 @@ const filteredStocks = computed(() => {
 })
 
 // 方法
-const handleSearch = () => {
-  ElMessage.success(`搜索: ${searchQuery.value}`)
+const handleSearch = async() => {
+  const res = await axios.get(`/api/getStocks/${searchQuery.value}`)
+  stocks = res.data.stocks
+  // chartData.value = res.data.history
+  // totalNetWorth.value = res.data.totalNetWorth
 }
 
 const toggleFavorite = (symbol) => {
@@ -167,7 +170,7 @@ const toggleFavorite = (symbol) => {
 }
 
 const handleRowClick = (row) => {
-  ElMessage.info(`点击了 ${row.symbol} - ${row.name}`)
+  // ElMessage.info(`点击了 ${row.symbol} - ${row.name}`)
 }
 
 const tableRowClassName = ({ row, rowIndex }) => {
@@ -181,12 +184,7 @@ const tableRowClassName = ({ row, rowIndex }) => {
   height: 100%;
   padding: 32px;
   overflow-y: auto;
-  background: #f8f9fa;
-}
-
-/* 头部样式 */
-.header {
-  margin-bottom: 32px;
+  background: linear-gradient(135deg, #f8f9fa 60%, #e0e7ff 100%);
 }
 
 .main-title {
@@ -194,72 +192,98 @@ const tableRowClassName = ({ row, rowIndex }) => {
   font-weight: 700;
   color: #223354;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
 }
-
-/* 卡片样式 */
-.search-section {
-  margin-bottom: 24px;
-}
-
-.stock-list-section {
-  margin-bottom: 24px;
+.main-title::after {
+  content: "";
+  display: block;
+  height: 4px;
+  width: 60px;
+  background: linear-gradient(90deg, #6366f1, #38bdf8);
+  border-radius: 2px;
+  margin-left: 16px;
 }
 
 .card-header {
   font-size: 1.5rem;
   font-weight: 600;
   color: #223354;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .section-subtitle {
-  font-size: 0.9rem;
-  color: #64748b;
+  font-size: 1rem;
+  color: #94a3b8;
   margin: 0 0 16px 0;
+  letter-spacing: 1px;
 }
 
-/* 股票信息样式 */
-.stock-symbol {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #223354;
+.el-card {
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px 0 rgba(99,102,241,0.08);
+  transition: box-shadow 0.3s;
 }
-
-.stock-name {
-  font-size: 0.9rem;
-  color: #64748b;
-}
-
-.current-price {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #223354;
-}
-
-/* 表格行样式 */
-.favorite-row {
-  background-color: #fef3c7 !important;
+.el-card:hover {
+  box-shadow: 0 8px 32px 0 rgba(99,102,241,0.16);
 }
 
 :deep(.el-table) {
-  border-radius: 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 1.08rem;
 }
-
 :deep(.el-table th) {
-  background-color: #f8f9fa;
+  background: #f1f5f9;
   color: #223354;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.08rem;
 }
-
+:deep(.el-table tr:hover) {
+  background: linear-gradient(90deg, #e0e7ff 0%, #f8fafc 100%) !important;
+  transition: background 0.3s;
+}
 :deep(.el-table td) {
-  padding: 12px 0;
+  padding: 14px 0;
+  font-size: 1.08rem;
 }
 
-:deep(.el-card__header) {
-  padding: 16px 20px;
-  border-bottom: 1px solid #e2e8f0;
+.favorite-row {
+  background-color: #fef3c7 !important;
+  transition: background 0.3s;
 }
 
-:deep(.el-card__body) {
-  padding: 20px;
+.current-price {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #2563eb;
+  letter-spacing: 1px;
+}
+
+:deep(.el-tag) {
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 2px 12px;
+  background: linear-gradient(90deg, #f87171 0%, #fbbf24 100%);
+  color: #fff;
+  border: none;
+}
+:deep(.el-tag[type="success"]) {
+  background: linear-gradient(90deg, #34d399 0%, #60a5fa 100%);
+}
+:deep(.el-tag[type="danger"]) {
+  background: linear-gradient(90deg, #f87171 0%, #fbbf24 100%);
+}
+
+.el-button {
+  transition: transform 0.15s;
+}
+.el-button:active {
+  transform: scale(0.92);
 }
 </style>

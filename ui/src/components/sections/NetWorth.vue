@@ -1,7 +1,11 @@
 <template>
   <div class="networth-section">
-    <h1>总资产概览</h1>
-
+    <el-row class="header" justify="space-between" align="middle">
+      <el-col>
+        <h1 class="main-title">总资产概览</h1>
+      </el-col>
+ 
+    </el-row>
     <!-- 中间统计卡片 -->
     <div class="stats-cards">
       <div class="stat-card">
@@ -48,64 +52,42 @@ const bankBalance=ref(0)
 const chartRef = ref(null)
 let chartInstance = null
 const chartData = ref([
-  { date: '2024-06-29', value: 2100000 },
-  { date: '2024-06-30', value: 2100000 },
-  { date: '2024-07-01', value: 2100000 },
-  { date: '2024-07-02', value: 2100000 },
-  { date: '2024-07-03', value: 2100000 },
-  { date: '2024-07-04', value: 2100000 },
-  { date: '2024-07-05', value: 2100000 },
-  { date: '2024-07-06', value: 2100000 },
-  { date: '2024-07-07', value: 2100000 },
-  { date: '2024-07-08', value: 2100000 },
-  { date: '2024-07-09', value: 2100000 },
-  { date: '2024-07-10', value: 2100000 },
-  { date: '2024-07-11', value: 2100000 },
-  { date: '2024-07-12', value: 2100000 },
-  { date: '2024-07-13', value: 2100000 },
-  { date: '2024-07-14', value: 2100000 },
-  { date: '2024-07-15', value: 2100000 },
-  { date: '2024-07-16', value: 2100000 },
-  { date: '2024-07-17', value: 2100000 },
-  { date: '2024-07-18', value: 2100000 },
-  { date: '2024-07-19', value: 2100000 },
-  { date: '2024-07-20', value: 2100000 },
-  { date: '2024-07-21', value: 2100000 },
-  { date: '2024-07-22', value: 2100000 },
-  { date: '2024-07-23', value: 2050000 },
-  { date: '2024-07-24', value: 2100000 },
-  { date: '2024-07-25', value: 2150000 },
-  { date: '2024-07-26', value: 2200000 },
-  { date: '2024-07-27', value: 2250000 },
-  { date: '2024-07-28', value: 2317371 }
+  { record_date: '2024-06-29', net_worth: 2100000 },
+  { record_date: '2024-06-30', net_worth: 2100000 },
+  { record_date: '2024-07-01', net_worth: 2100000 },
+  { record_date: '2024-07-02', net_worth: 2100000 },
+  { record_date: '2024-07-03', net_worth: 2100000 },
+  { record_date: '2024-07-04', net_worth: 2100000 },
+  { record_date: '2024-07-05', net_worth: 2100000 },
+
 ])
 
 // 计算统计数据
-const maxValue = computed(() => Math.max(...chartData.value.map(d => d.value)))
-const minValue = computed(() => Math.min(...chartData.value.map(d => d.value)))
-const maxDate = computed(() => {
-  const maxItem = chartData.value.find(d => d.value === maxValue.value)
-  return maxItem ? maxItem.date.slice(5) : ''
-})
-const minDate = computed(() => {
-  const minItem = chartData.value.find(d => d.value === minValue.value)
-  return minItem ? minItem.date.slice(5) : ''
-})
+// const maxValue = computed(() => Math.max(...chartData.value.map(d => d.value)))
+// const minValue = computed(() => Math.min(...chartData.value.map(d => d.value)))
+// const maxDate = computed(() => {
+//   const maxItem = chartData.value.find(d => d.value === maxValue.value)
+//   return maxItem ? maxItem.date.slice(5) : ''
+// })
+// const minDate = computed(() => {
+//   const minItem = chartData.value.find(d => d.value === minValue.value)
+//   return minItem ? minItem.date.slice(5) : ''
+// })
 
 
 const changePercent = computed(() => {
   if (chartData.value.length < 2) return 0
-  const first = chartData.value[0].value
-  const last = chartData.value[chartData.value.length - 1].value
+  const first = chartData.value[0].net_worth
+  const last = chartData.value[chartData.value.length - 1].net_worth
   return ((last - first) / first) * 100
 })
 
 const fetchData = async () => {
   const userId=1
   // 这里替换为实际的API调用
-  const res = await axios.get(`/api/networth/{userId}`)
-  chartData.value = res.data.history
-  totalNetWorth.value = res.data.totalNetWorth
+  // const res = await axios.get(`/api/networth/{userId}`)
+  // chartData.value = res.data.history
+  // totalNetWorth.value = res.data.totalNetWorth
   renderChart()
 }
 
@@ -116,7 +98,6 @@ const renderChart = () => {
   
   const dates = chartData.value.map(item => item.record_date.slice(5))
   const values = chartData.value.map(item => item.net_worth)
-  
   chartInstance.setOption({
     grid: { 
       left: 60, 
@@ -139,10 +120,10 @@ const renderChart = () => {
       type: 'value',
       axisLine: { show: false },
       splitLine: { lineStyle: { color: '#e3eaf2' } },
-      axisLabel: { 
-        color: '#64748b', 
+      axisLabel: {
+        color: '#64748b',
         fontSize: 12,
-        formatter: (value) => `￥￥{(value / 1000000).toFixed(1)}M`
+        formatter: value => `￥${(value / 1000000).toFixed(1)}M`
       }
     },
     series: [{
@@ -167,7 +148,7 @@ const renderChart = () => {
       textStyle: { color: '#fff' },
       formatter: (params) => {
         const data = params[0]
-        return `￥{data.name}<br/>￥￥{data.value.toLocaleString()}`
+        return `￥{data.name}<br/>￥${data.value.toLocaleString()}`
       }
     }
   })
@@ -181,6 +162,25 @@ watch(days, fetchData)
 </script>
 
 <style scoped>
+.main-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #223354;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+.main-title::after {
+  content: "";
+  display: block;
+  height: 4px;
+  width: 60px;
+  background: linear-gradient(90deg, #6366f1, #38bdf8);
+  border-radius: 2px;
+  margin-left: 16px;
+}
 .networth-section {
   width: 100%;
   height: 100%;
