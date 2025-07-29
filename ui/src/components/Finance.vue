@@ -35,21 +35,25 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import NetWorthSection from './sections/NetWorth.vue'
-import CashFlowSection from './sections/CashFlow.vue'
-import MarketMoversSection from './sections/MarketMovers.vue'
-import InsightsSection from './sections/Insights.vue'
+import NetWorth from './sections/NetWorth.vue'
+import StockPrice from './sections/StockPrice.vue'
+import InvestmentPortfolio from './sections/InvestmentPortfolio.vue'
+import BankAccount from './sections/BankAccount.vue'
+import AssetAnalysis from './sections/AssetAnalysis.vue'
+import MarketTrends from './sections/MarketTrends.vue'
 
 const sectionComponents = [
-  NetWorthSection,
-  CashFlowSection,
-  MarketMoversSection,
-  InsightsSection
+  NetWorth,
+  StockPrice,
+  InvestmentPortfolio,
+  BankAccount,
+  AssetAnalysis,
+  MarketTrends
 ]
 // 1. 配置数据
-const tabs = ref(['Net Worth', 'Cash Flow', 'Holdings', 'Market Movers']) // Tab文案
+const tabs = ref(['总资产概览', '当前股票价格', '投资组合', '银行账户', '资产分析', '市场动态']) // Tab文案
 const sectionBg = ref([
-  '#EAF5FF', '#FFF9EB', '#EBFFEF', '#F9EBFF' // 每个Section的背景色（区分视觉）
+  '#EAF5FF', '#FFF9EB', '#EBFFEF', '#F9EBFF', '#F0F8FF', '#FFF5F5'// 每个Section的背景色（区分视觉）
 ])
 const sections = ref([]) // 存储每个Section的DOM引用
 const scrollRef = ref(null) // 滚动容器的Ref
@@ -181,7 +185,8 @@ onMounted(() => {
 
 /* Section */
 .section {
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;

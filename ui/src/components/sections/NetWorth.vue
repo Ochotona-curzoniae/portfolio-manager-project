@@ -1,64 +1,28 @@
 <template>
   <div class="networth-section">
-    <!-- 顶部数据概览 -->
-    <div class="header">
-      <div class="left-section">
-        <div class="title">Net Worth</div>
-        <div class="time-selector">
-          <select v-model="days" @change="fetchData" class="time-dropdown">
-            <option :value="5">最近5天</option>
-            <option :value="7">最近7天</option>
-            <option :value="30">最近30天</option>
-          </select>
-        </div>
-      </div>
-      
-      <div class="center-section">
-        <div class="main-amount">${{ total.toLocaleString() }}</div>
-        <div class="change-info">
-          <span class="change-label">LAST {{ days }} DAYS</span>
-          <span v-if="changeRange !== null" :class="changeRange >= 0 ? 'up' : 'down'">
-            {{ changeRange >= 0 ? '+' : '' }}${{ changeRange.toLocaleString() }}
-          </span>
-        </div>
-      </div>
-      
-      <div class="right-section">
-        <div class="today-change">
-          <div class="change-label">TODAY'S CHANGE</div>
-          <span v-if="changeToday !== null" :class="changeToday >= 0 ? 'up' : 'down'">
-            {{ changeToday >= 0 ? '+' : '' }}${{ changeToday.toLocaleString() }}
-          </span>
-        </div>
-        <div class="change-percent">
-          <span v-if="changePercent !== null" :class="changePercent >= 0 ? 'up' : 'down'">
-            {{ changePercent >= 0 ? '+' : '' }}{{ changePercent.toFixed(2) }}%
-          </span>
-        </div>
-      </div>
-    </div>
+    <h1>总资产概览</h1>
 
     <!-- 中间统计卡片 -->
     <div class="stats-cards">
       <div class="stat-card">
-        <div class="stat-label">最高值</div>
-        <div class="stat-value">${{ maxValue.toLocaleString() }}</div>
-        <div class="stat-date">{{ maxDate }}</div>
+        <div class="stat-label">总净资产</div>
+        <div class="stat-value">￥{{ totalNetWorth.toLocaleString() }}</div>
+        <div class="stat-date">{{ changePercent >= 0 ? '+' : '' }}{{ changePercent.toFixed(2) }}%较上周</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">最低值</div>
-        <div class="stat-value">${{ minValue.toLocaleString() }}</div>
-        <div class="stat-date">{{ minDate }}</div>
+        <div class="stat-label">银行卡余额</div>
+        <div class="stat-value">￥{{ bankBalance.toLocaleString() }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">平均日增长</div>
-        <div class="stat-value">${{ avgDailyChange.toLocaleString() }}</div>
-        <div class="stat-trend">/ 天</div>
+        <div class="stat-label">投资资产</div>
+        <div class="stat-value">￥{{investmentValue.toLocaleString() }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">波动率</div>
-        <div class="stat-value">{{ volatility.toFixed(2) }}%</div>
-        <div class="stat-trend">标准差</div>
+        <div class="stat-label">总盈亏</div>
+        <div class="stat-value" :style="{ color: totalGainLoss > 0 ? 'green' : (totalGainLoss < 0 ? 'red' : '') }">
+          {{ totalGainLoss >= 0 ? '+' : '' }}￥{{ totalGainLoss }}
+        </div>
+        <div class="stat-trend">{{ gainLossPercent >= 0 ? '+' : '' }}{{ gainLossPercent.toFixed(2)}}%总收益率</div>
       </div>
     </div>
 
@@ -75,9 +39,12 @@ import axios from 'axios'
 import * as echarts from 'echarts'
 
 const days = ref(30)
-const total = ref(2317371)
-const changeToday = ref(3402)
-const changeRange = ref(138884)
+const totalNetWorth = ref(2317371)
+const investmentValue=ref(12345)
+const totalGainLoss=ref(10)
+const gainLossPercent= ref(10)
+const bankBalance=ref(0)
+
 const chartRef = ref(null)
 let chartInstance = null
 const chartData = ref([
@@ -124,17 +91,8 @@ const minDate = computed(() => {
   const minItem = chartData.value.find(d => d.value === minValue.value)
   return minItem ? minItem.date.slice(5) : ''
 })
-const avgDailyChange = computed(() => {
-  if (chartData.value.length < 2) return 0
-  return Math.round((chartData.value[chartData.value.length - 1].value - chartData.value[0].value) / (chartData.value.length - 1))
-})
-const volatility = computed(() => {
-  if (chartData.value.length < 2) return 0
-  const values = chartData.value.map(d => d.value)
-  const mean = values.reduce((a, b) => a + b, 0) / values.length
-  const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length
-  return Math.sqrt(variance) / mean * 100
-})
+
+
 const changePercent = computed(() => {
   if (chartData.value.length < 2) return 0
   const first = chartData.value[0].value
@@ -143,20 +101,11 @@ const changePercent = computed(() => {
 })
 
 const fetchData = async () => {
+  const userId=1
   // 这里替换为实际的API调用
-  const res = await axios.get(`/api/networth/${days.value}`)
+  const res = await axios.get(`/api/networth/{userId}`)
   chartData.value = res.data.history
-  total.value = res.data.total
-  changeToday.value = res.data.changeToday
-  
-  // 模拟数据更新
-  if (days.value === 5) {
-    chartData.value = chartData.value.slice(-5)
-  } else if (days.value === 7) {
-    chartData.value = chartData.value.slice(-7)
-  }
-  
-  changeRange.value = chartData.value[chartData.value.length - 1].value - chartData.value[0].value
+  totalNetWorth.value = res.data.totalNetWorth
   renderChart()
 }
 
@@ -165,8 +114,8 @@ const renderChart = () => {
     chartInstance = echarts.init(chartRef.value)
   }
   
-  const dates = chartData.value.map(item => item.date.slice(5))
-  const values = chartData.value.map(item => item.value)
+  const dates = chartData.value.map(item => item.record_date.slice(5))
+  const values = chartData.value.map(item => item.net_worth)
   
   chartInstance.setOption({
     grid: { 
@@ -193,7 +142,7 @@ const renderChart = () => {
       axisLabel: { 
         color: '#64748b', 
         fontSize: 12,
-        formatter: (value) => `$${(value / 1000000).toFixed(1)}M`
+        formatter: (value) => `￥￥{(value / 1000000).toFixed(1)}M`
       }
     },
     series: [{
@@ -218,7 +167,7 @@ const renderChart = () => {
       textStyle: { color: '#fff' },
       formatter: (params) => {
         const data = params[0]
-        return `${data.name}<br/>$${data.value.toLocaleString()}`
+        return `￥{data.name}<br/>￥￥{data.value.toLocaleString()}`
       }
     }
   })
