@@ -136,10 +136,12 @@ export async function getLast7Closes(symbols) {
   return isSingle ? results[0] : results;
 }
 
+
 const symbols = ['AAPL', 'TSLA', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META'];
 
-export async function fetchFormattedQuotes() {
+export async function getDefaultQuotes() {
   const results = [];
+
   await Promise.all(symbols.map(async (symbol) => {
     try {
       const [quoteRes, profileRes] = await Promise.all([
