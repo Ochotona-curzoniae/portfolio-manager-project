@@ -2,12 +2,46 @@ import axios from 'axios';
 
 const API_KEY = process.env.FINNHUB_API_KEY || 'd24rmn9r01qu2jgjn8mgd24rmn9r01qu2jgjn8n0';
 
+export async function getBatchPricesByAlph() {
+  const API_KEY_ALPH = "9VCRQXCXFA9IE3V2";
+  const symbols = ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "NVDA", "META"]
+   // 并发请求所有 symbol
+   const results = await Promise.all(symbols.map(async (symbol) => {
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY_ALPH}`;
+    try {
+      const response = await axios.get(url);
+      const data = response.data['Global Quote'];
+
+      if (!data || Object.keys(data).length === 0) {
+        return { symbol, error: 'Symbol not found or invalid response' };
+      }
+
+      return {
+        symbol: data['01. symbol'],
+        open: parseFloat(data['02. open']),
+        high: parseFloat(data['03. high']),
+        low: parseFloat(data['04. low']),
+        price: parseFloat(data['05. price']),
+        volume: parseInt(data['06. volume']),
+        latestTradingDay: data['07. latest trading day'],
+        previousClose: parseFloat(data['08. previous close']),
+        change: parseFloat(data['09. change']),
+        changePercent: data['10. change percent'],
+      };
+    } catch (error) {
+      return { symbol, error: error.message || 'Failed to fetch stock data' };
+    }
+  }));
+
+  res.json({ success: true, data: results });
+}
+
 export async function getBatchPrices(symbols) {
   const results = [];
 
   await Promise.all(symbols.map(async (symbol) => {
     try {
-      const [quoteRes] = await Promise.all([
+      const [quoteRes, profileRes] = await Promise.all([
         axios.get('https://finnhub.io/api/v1/quote', {
           params: { symbol, token: API_KEY }
         })
@@ -137,7 +171,7 @@ export async function getLast7Closes(symbols) {
 }
 
 
-const symbols = ['AAPL', 'TSLA', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META'];
+const symbols = ['GOOGL', 'AMZN', 'NVDA', 'META'];
 
 export async function getDefaultQuotes() {
   const results = [];
@@ -146,9 +180,6 @@ export async function getDefaultQuotes() {
     try {
       const [quoteRes, profileRes] = await Promise.all([
         axios.get('https://finnhub.io/api/v1/quote', {
-          params: { symbol, token: API_KEY }
-        }),
-        axios.get('https://finnhub.io/api/v1/stock/profile2', {
           params: { symbol, token: API_KEY }
         })
       ]);

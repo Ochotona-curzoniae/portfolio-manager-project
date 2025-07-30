@@ -3,6 +3,8 @@ import mysql from 'mysql2'
 import overviewRouter from './overview.js'
 import portfolioRouter from './portfolio.js'
 import { BankModel } from './bankModel.js';
+import { getBatchPricesByAlph } from './stockService.js';
+import axios from 'axios';
 
 const app = express();
 app.use(express.json());
@@ -120,6 +122,46 @@ app.post('/api/bank', async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// 批量获取股票行情
+app.get('/stocks', async (req, res) => {
+  // 支持 /stocks?symbols=AAPL,TSLA,GOOGL
+  const symbols = ["AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "NVDA", "META"];
+  if (!symbols.length) {
+    return res.status(400).json({ error: 'No symbols provided' });
+  }
+  console.log(symbols);
+
+  // 并发请求所有 symbol
+  const results = await Promise.all(symbols.map(async (symbol) => {
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${API_KEY}`;
+    try {
+      const response = await axios.get(url);
+      const data = response.data['Global Quote'];
+
+      if (!data || Object.keys(data).length === 0) {
+        return { symbol, error: 'Symbol not found or invalid response' };
+      }
+
+      return {
+        symbol: data['01. symbol'],
+        open: parseFloat(data['02. open']),
+        high: parseFloat(data['03. high']),
+        low: parseFloat(data['04. low']),
+        price: parseFloat(data['05. price']),
+        volume: parseInt(data['06. volume']),
+        latestTradingDay: data['07. latest trading day'],
+        previousClose: parseFloat(data['08. previous close']),
+        change: parseFloat(data['09. change']),
+        changePercent: data['10. change percent'],
+      };
+    } catch (error) {
+      return { symbol, error: error.message || 'Failed to fetch stock data' };
+    }
+  }));
+
+  res.json({ success: true, data: results });
 });
 
 app.listen(3000, () => console.log('running on http://localhost:3000'));
