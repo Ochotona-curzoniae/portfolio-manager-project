@@ -192,8 +192,8 @@ onUnmounted(() => {
 
 
 const handleSearch = async() => {
-  const res = await axios.get(`/api/getStocks/${searchQuery.value}`)
-  stocks = res.data.stocks
+  // const res = await axios.get(`/api/getStocks/${searchQuery.value}`)
+  // stocks = res.data.stocks
   // chartData.value = res.data.history
   // totalNetWorth.value = res.data.totalNetWorth
 }

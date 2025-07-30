@@ -113,32 +113,49 @@
     <el-dialog
       v-model="dialogVisible"
       title="添加投资"
-      width="500px"
+      width="900px"
       :close-on-click-modal="false"
       class="investment-dialog"
     >
       <div class="dialog-content">
-        <el-card class="form-card" shadow="never">
-          <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" class="add-stock-form">
-            <el-form-item label="投资类型">
-              <el-input v-model="form.type" disabled class="disabled-input" />
-            </el-form-item>
-            <el-form-item label="选择股票" prop="name">
-              <el-select v-model="form.name" placeholder="请选择要投资的股票" style="width: 100%;" filterable class="stock-select">
-                <el-option v-for="item in stockList" :key="item.name" :label="item.name" :value="item.name" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="每股价格" v-if="form.name">
-              <el-input :value="selectedStockPrice" readonly class="price-input" />
-            </el-form-item>
-            <el-form-item label="买入股数" prop="count">
-              <el-input-number v-model="form.count" :min="1" :max="100000" style="width: 100%;" class="count-input" />
-            </el-form-item>
-            <el-form-item label="投资总额">
-              <el-input :value="totalPrice" readonly class="total-price-input" />
-            </el-form-item>
-          </el-form>
-        </el-card>
+        <el-row :gutter="24">
+          <!-- 左侧表单 -->
+          <el-col :span="12">
+            <el-card class="form-card" shadow="never">
+              <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" class="add-stock-form">
+                <el-form-item label="投资类型">
+                  <el-input v-model="form.type" disabled class="disabled-input" />
+                </el-form-item>
+                <el-form-item label="选择股票" prop="name">
+                  <el-select v-model="form.name" placeholder="请选择要投资的股票" style="width: 100%;" filterable class="stock-select" @change="onStockChange">
+                    <el-option v-for="item in stockList" :key="item.name" :label="item.name" :value="item.name" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="每股价格" v-if="form.name">
+                  <el-input :value="selectedStockPrice" readonly class="price-input" />
+                </el-form-item>
+                <el-form-item label="买入股数" prop="count">
+                  <el-input-number v-model="form.count" :min="1" :max="100000" style="width: 100%;" class="count-input" />
+                </el-form-item>
+                <el-form-item label="投资总额">
+                  <el-input :value="totalPrice" readonly class="total-price-input" />
+                </el-form-item>
+              </el-form>
+            </el-card>
+          </el-col>
+          
+          <!-- 右侧图表 -->
+          <el-col :span="12">
+            <el-card class="chart-card" shadow="never">
+              <template #header>
+                <div class="chart-header">
+                  <span class="chart-title">{{ form.name ? form.name + ' 过去7天价格走势' : '选择股票查看价格走势' }}</span>
+                </div>
+              </template>
+              <div id="stock-chart" class="stock-chart-container"></div>
+            </el-card>
+          </el-col>
+        </el-row>
       </div>
       <template #footer>
         <div class="dialog-footer">
@@ -377,6 +394,151 @@ const expectedProfit = computed(() => {
 
 const tradeRules = {
   count: [{ required: true, message: '请输入数量', trigger: 'blur' }]
+}
+
+// 图表相关数据
+const selectedPeriod = ref('7D')
+const chartPeriods = ref([
+  { label: '7天', value: '7D' }
+])
+
+// 模拟股票历史数据 - 只展示过去7天
+const stockHistoryData = ref({
+  'tsl': {
+    '7D': [
+      { date: '2024-01-01', price: 150 },
+      { date: '2024-01-02', price: 152 },
+      { date: '2024-01-03', price: 155 },
+      { date: '2024-01-04', price: 153 },
+      { date: '2024-01-05', price: 158 },
+      { date: '2024-01-06', price: 160 },
+      { date: '2024-01-07', price: 158 }
+    ]
+  },
+  'apple': {
+    '7D': [
+      { date: '2024-01-01', price: 160 },
+      { date: '2024-01-02', price: 162 },
+      { date: '2024-01-03', price: 165 },
+      { date: '2024-01-04', price: 163 },
+      { date: '2024-01-05', price: 168 },
+      { date: '2024-01-06', price: 170 },
+      { date: '2024-01-07', price: 164 }
+    ]
+  }
+})
+
+let stockChart = null
+
+// 股票选择变化时更新图表
+const onStockChange = () => {
+  if (form.value.name) {
+    updateStockChart()
+  }
+}
+
+// 切换时间周期
+const changePeriod = (period) => {
+  selectedPeriod.value = period
+  updateStockChart()
+}
+
+// 更新股票图表
+const updateStockChart = () => {
+  if (!form.value.name || !stockHistoryData.value[form.value.name]) {
+    return
+  }
+  
+  const data = stockHistoryData.value[form.value.name][selectedPeriod.value]
+  if (!data) return
+  
+  const chartDom = document.getElementById('stock-chart')
+  if (!chartDom) return
+  
+  if (stockChart) {
+    stockChart.dispose()
+  }
+  
+  stockChart = echarts.init(chartDom)
+  
+  const option = {
+    grid: {
+      left: '10%',
+      right: '10%',
+      top: '15%',
+      bottom: '15%'
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(params) {
+        const data = params[0]
+        return `${data.name}<br/>价格: $${data.value}`
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: data.map(item => item.date),
+      axisLine: {
+        lineStyle: {
+          color: '#e4e7ed'
+        }
+      },
+      axisLabel: {
+        color: '#606266',
+        fontSize: 12
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: {
+        lineStyle: {
+          color: '#e4e7ed'
+        }
+      },
+      axisLabel: {
+        color: '#606266',
+        fontSize: 12,
+        formatter: '${value}'
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#f0f0f0'
+        }
+      }
+    },
+    series: [
+      {
+        name: '价格',
+        type: 'line',
+        data: data.map(item => item.price),
+        smooth: true,
+        lineStyle: {
+          color: '#409eff',
+          width: 3
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+              { offset: 1, color: 'rgba(64, 158, 255, 0.05)' }
+            ]
+          }
+        },
+        itemStyle: {
+          color: '#409eff',
+          borderWidth: 2,
+          borderColor: '#fff'
+        }
+      }
+    ]
+  }
+  
+  stockChart.setOption(option)
 }
 
 // 打开买入/卖出Dialog
@@ -666,5 +828,89 @@ const onTradeSubmit = () => {
 .confirm-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* 图表卡片样式 */
+.chart-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e4e7ed;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  height: 100%;
+}
+
+.chart-card :deep(.el-card__header) {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fafbfc;
+}
+
+.chart-card :deep(.el-card__body) {
+  padding: 20px;
+  height: calc(100% - 60px);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #223354;
+}
+
+.chart-periods {
+  display: flex;
+  gap: 8px;
+}
+
+.period-btn {
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.period-btn:hover {
+  transform: translateY(-1px);
+}
+
+.stock-chart-container {
+  width: 100%;
+  height: 300px;
+  background: white;
+  border-radius: 8px;
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .investment-dialog {
+    width: 95% !important;
+  }
+  
+  .dialog-content .el-row {
+    flex-direction: column;
+  }
+  
+  .dialog-content .el-col {
+    width: 100% !important;
+    margin-bottom: 20px;
+  }
+  
+  .chart-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .chart-periods {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 </style> 
