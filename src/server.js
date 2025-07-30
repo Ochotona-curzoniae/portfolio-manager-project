@@ -2,6 +2,7 @@ import express from 'express'
 import mysql from 'mysql2'
 import overviewRouter from './overview.js'
 import portfolioRouter from './portfolio.js'
+import { BankModel } from './bankModel.js';
 
 const app = express();
 app.use(express.json());
@@ -89,4 +90,36 @@ app.get('/api/stocks/market-movers', async (req, res) => {
     }
   });
 });
+
+// 获取指定用户银行账户列表
+app.get('/api/bank/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const accounts = await BankModel.getBankAccounts(userId);
+    res.json({ success: true, data: accounts });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 添加新银行账户
+app.post('/api/bank', async (req, res) => {
+  try {
+    const { userId, bankName, accountType, accountNumber, balance, currency, interestRate, creditLimit } = req.body;
+    await BankModel.addBankAccount(
+      userId,
+      bankName,
+      accountType,
+      accountNumber,
+      balance,
+      currency,
+      interestRate,
+      creditLimit
+    );
+    res.json({ success: true, message: 'Bank account added successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.listen(3000, () => console.log('running on http://localhost:3000'));
