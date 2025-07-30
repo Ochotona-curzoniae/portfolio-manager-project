@@ -135,3 +135,38 @@ export async function getLast7Closes(symbols) {
 
   return isSingle ? results[0] : results;
 }
+
+const symbols = ['AAPL', 'TSLA', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META'];
+
+export async function fetchFormattedQuotes() {
+  const results = [];
+  await Promise.all(symbols.map(async (symbol) => {
+    try {
+      const [quoteRes, profileRes] = await Promise.all([
+        axios.get('https://finnhub.io/api/v1/quote', {
+          params: { symbol, token: API_KEY }
+        }),
+        axios.get('https://finnhub.io/api/v1/stock/profile2', {
+          params: { symbol, token: API_KEY }
+        })
+      ]);
+
+      const quote = quoteRes.data;
+
+      results.push({
+        symbol,
+        price: parseFloat(quote.c),
+        change: parseFloat(quote.d),
+        changePercent: parseFloat(quote.dp),
+        volume: quote.v ? parseInt(quote.v) : null,
+        lastUpdated: new Date().toISOString().split('T')[0] // 模拟日期（可根据实际需要替换）
+      });
+    } catch (err) {
+      console.error(`Error fetching data for ${symbol}:`, err.message);
+    }
+  }));
+
+  console.log(results);
+  return results;
+}
+

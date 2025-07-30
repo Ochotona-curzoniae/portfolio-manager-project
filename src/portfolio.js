@@ -1,8 +1,7 @@
 import express from 'express';
 import pool from '../config/db.js';
-import { getBatchPrices } from './stockService.js';
+import { getBatchPrices, getLast7Closes, fetchFormattedQuotes} from './stockService.js';
 import { BankModel } from './bankModel.js';
-import { getLast7Closes } from './stockService.js';
 
 const router = express.Router();
 
@@ -158,5 +157,29 @@ router.get('/history/:symbol', async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+
+// 单股票价格接口
+router.get('/history/simple/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const result = await getBatchPrices([symbol]);
+    res.json({ success: true, data: result[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+// 查询股票默认接口(默认查询7只股票)
+router.get('/history/simple/symbols', async (req, res) => {
+  try {
+    const result = await fetchFormattedQuotes(symbols);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
 
 export default router; 
