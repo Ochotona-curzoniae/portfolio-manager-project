@@ -1,11 +1,13 @@
 import express from 'express'
 import mysql from 'mysql2'
 import overviewRouter from './overview.js'
+import portfolioRouter from './portfolio.js'
 
 const app = express();
 app.use(express.json());
 app.use(express.static("public"));
 app.use('/api', overviewRouter)
+app.use('/api/portfolio', portfolioRouter)
 console.log(app);
 app.get('/api/networth/:days', async (req, res) => {
     try {
@@ -51,5 +53,14 @@ app.get('/api/networth/:days', async (req, res) => {
       next(err);
     }
   });
-
+  app.get('/', async (req, res) => {
+    try {
+      console.log("hello hello")
+      res.json({
+        "name": "success"
+      })
+    } catch (err) {
+      next(err);
+    }
+  });
 app.listen(3000, () => console.log('running on http://localhost:3000'));
