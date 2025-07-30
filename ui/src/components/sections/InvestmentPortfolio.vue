@@ -16,8 +16,10 @@
               <span>总资产</span>
             </div>
           </template>
-          <div class="stat-value">$125,430.50</div>
-          <div class="stat-change positive">+$2,340.25 (+1.9%)</div>
+          <div class="stat-value">￥{{ totalValue }}</div>
+          <div :class="totalValueRate > 0 ? 'stat-change positive' : 'stat-change negative'">
+            {{ totalValueRate > 0 ? '+' : '' }}{{ totalValueRate }}%
+          </div>  
         </el-card>
       </el-col>
 
@@ -40,8 +42,8 @@
               <span>持仓数量</span>
             </div>
           </template>
-          <div class="stat-value">12</div>
-          <div class="stat-change">3个新增</div>
+          <div class="stat-value">{{ holdingList.length-1 }}</div>
+          <!-- <div class="stat-change">3个新增</div> -->
         </el-card>
       </el-col>
     </el-row>
@@ -70,16 +72,48 @@
         highlight-current-row
         style="width: 100%;"
       >
-        <el-table-column prop="name" label="股票名称"  />
-        <el-table-column prop="count" label="持股数量"   align="center"/>
-        <el-table-column prop="beforePrice" label="成本价"  align="center"/>
-        <el-table-column prop="currentPrice" label="现价" align="center" />
-        <el-table-column prop="amount" label="投资金额" align="center"/>
-        <el-table-column prop="currentValue" label="当前价值" align="center"/>
-        <el-table-column prop="return" label="收益率"  align="center">
+        <el-table-column prop="symbol" label="股票名称"  />
+        <el-table-column prop="companyName" label="公司名称"  />
+
+        <el-table-column prop="shares" label="持股数量" align="center">
+          <template #default="{ row }">
+            <el-tag type="info" effect="plain" size="large" style="font-size: 16px; padding: 4px 12px;">
+              {{ row.shares }} 股
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="avgPrice" label="均价" align="center">
+          <template #default="{ row }">
+            <span style="color: #409EFF; font-weight: bold; font-size: 15px;">
+              ￥{{ row.avgPrice }}
+            </span>
+            <span style="color: #999; font-size: 12px;">/股</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="currentPrice" label="现价" align="center">
+          <template #default="{ row }">
+            <span style="color: #67C23A; font-weight: bold; font-size: 15px;">
+              ￥{{ row.currentPrice }}
+            </span>
+            <span style="color: #999; font-size: 12px;">/股</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="marketValue" label="市值" align="center">
+          <template #default="{ row }">
+            <el-tag
+              :type="Number(row.marketValue) >= 10 ? 'success' : 'warning'"
+              effect="dark"
+              size="large"
+              style="font-size: 16px; padding: 4px 12px;"
+            >
+              ￥{{ row.marketValue }} 亿元
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="gainLossPercent" label="收益率"  align="center">
           <template #default="{ row }">
             <span :class="row.return >= 0 ? 'profit-tag' : 'loss-tag'">
-              {{ row.return >= 0 ? '+' : '' }}{{ row.return }}%
+              {{ row.gainLossPercent >= 0 ? '+' : '' }}{{ row.gainLossPercent }}%
             </span>
           </template>
         </el-table-column>
@@ -209,31 +243,12 @@ import { Plus, Refresh, View, Edit } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
 
-const holdingList = ref([
-  {
-    name: '苹果公司',
-    count: 100,
-    beforePrice:150,
-    currentPrice:162.45,
-    amount: '$15,000',
-    currentValue: '$16,245',
-    return: 8.3,
-    icon: 'https://via.placeholder.com/32'
-  },
-  {
-    name: '特斯拉',
-    count: 100, 
-    beforePrice:150,
-    currentPrice:162.45,
-    amount: '$15,000',
-    currentValue: '$16,245',
-    return: 8.3,
-    icon: 'https://via.placeholder.com/32'
-  },
-])
+const holdingList = ref([])
 const cash =ref(0)
 const stocks =ref(0)
-
+const currentAllocation=ref([])
+const totalValue=ref([])
+const totalValueRate=ref(-10)
 
 const dialogVisible = ref(false)
 const formRef = ref()
@@ -313,11 +328,42 @@ function getPieData() {
 }
 
 
-function getInitData(){
-  // axios.get
-
+const getInitData = async ()=>{
+  const userId = 1
+  try {
+    // 使用 await 直接获取响应结果
+    const res = await axios.get(`/api/portfolio/${userId}`)
+    if (res.data && res.data.success && res.data.data) {
+      const data = res.data.data
+      
+      // 更新响应式数据 - 字段名转换为驼峰
+      holdingList.value = (data.stockHoldings || []).map(item => ({
+        userId: item.user_id,
+        symbol: item.symbol,
+        companyName: item.company_name,
+        shares: item.shares,
+        avgPrice: Number(item.avg_price).toFixed(2),
+        currentPrice: Number(item.current_price).toFixed(2),
+        marketValue: Number(item.market_value).toFixed(2),
+        gainLoss: item.gain_loss,
+        gainLossPercent: Number(item.gain_loss_percent).toFixed(2),
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }))
+      currentAllocation.value=data.currentAllocation||[]
+      totalValue.value=Number(data.totalValue||0).toFixed(2)
+      
+    } else {
+      console.error('API返回数据格式不正确:', res.data)
+    }
+  } catch (error) {
+    console.error('获取数据失败:', error)
+  }
 }
+
 onMounted(() => {
+  getInitData()
+
   const chart = echarts.init(document.getElementById('asset-pie'))
   const option = {
     tooltip: { 
@@ -610,7 +656,9 @@ const onTradeSubmit = () => {
 .stat-change.positive {
   color: #10b981;
 }
-
+.stat-change.negative {
+  color: #f30d0d;
+}
 .investment-name {
   display: flex;
   align-items: center;
