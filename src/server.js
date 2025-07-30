@@ -63,4 +63,30 @@ app.get('/api/networth/:days', async (req, res) => {
       next(err);
     }
   });
+
+// 新增市场主要动态API
+app.get('/api/stocks/market-movers', async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      gainers: [
+        { symbol: 'NVDA', name: '英伟达', price: 892.14, change: 45.67, changePercent: 5.39, volume: 89200000 },
+        { symbol: 'TSLA', name: '特斯拉', price: 248.50, change: 32.15, changePercent: 4.85, volume: 156700000 }
+      ],
+      losers: [
+        { symbol: 'META', name: 'Meta', price: 325.67, change: -18.92, changePercent: -5.49, volume: 78400000 },
+        { symbol: 'NFLX', name: '奈飞', price: 456.78, change: -22.34, changePercent: -4.66, volume: 23100000 }
+      ],
+      mostActive: [
+        { symbol: 'TSLA', name: '特斯拉', price: 248.50, change: 32.15, changePercent: 4.85, volume: 234500000 },
+        { symbol: 'AAPL', name: '苹果', price: 175.43, change: 8.92, changePercent: 3.37, volume: 189700000 }
+      ],
+      indices: [
+        { name: '道琼斯', value: 38712.21, changePercent: 0.15 },
+        { name: '纳斯达克', value: 17857.02, changePercent: 0.3 },
+        { name: '标普500', value: 5473.17, changePercent: 0.2 }
+      ]
+    }
+  });
+});
 app.listen(3000, () => console.log('running on http://localhost:3000'));
