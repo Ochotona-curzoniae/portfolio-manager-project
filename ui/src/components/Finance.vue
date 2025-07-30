@@ -12,29 +12,15 @@
         {{ tab }}
       </div>
     </aside>
-
-    <!-- 右侧滚动容器 -->
-    <main class="scroll-container" ref="scrollRef">
-      <section 
-        v-for="(tab, index) in tabs" 
-        :key="index" 
-        :ref="(el) => sections[index] = el" 
-        class="section"
-        :style="{ background: sectionBg[index] }"
-      >
-        <!-- 这里可替换为实际数据可视化内容（如ECharts、表格） -->
-        <!-- <div class="section-content">
-          <h2>{{ tab }}</h2>
-          <p>模拟Section内容...（可扩展为图表/数据）</p>
-        </div> -->
-        <component :is="sectionComponents[index]" />
-      </section>
+    <!-- 右侧只显示当前Tab对应的内容 -->
+    <main class="section">
+      <component :is="sectionComponents[activeTab]" />
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref } from 'vue'
 import NetWorth from './sections/NetWorth.vue'
 import StockPrice from './sections/StockPrice.vue'
 import InvestmentPortfolio from './sections/InvestmentPortfolio.vue'
@@ -50,47 +36,11 @@ const sectionComponents = [
   AssetAnalysis,
   MarketTrends
 ]
-// 1. 配置数据
-const tabs = ref(['总资产概览', '当前股票价格', '投资组合', '银行账户', '资产分析', '市场动态']) // Tab文案
-const sectionBg = ref([
-  '#EAF5FF', '#FFF9EB', '#EBFFEF', '#F9EBFF', '#F0F8FF', '#FFF5F5'// 每个Section的背景色（区分视觉）
-])
-const sections = ref([]) // 存储每个Section的DOM引用
-const scrollRef = ref(null) // 滚动容器的Ref
-const activeTab = ref(0) // 当前激活的Tab索引
-
-// 2. 点击Tab：滚动到对应Section
+const tabs = ref(['总资产概览', '当前股票价格', '投资组合', '银行账户', '资产分析', '市场动态'])
+const activeTab = ref(0)
 const handleTabClick = (index) => {
-  if (!sections.value[index]) return
-  const targetTop = sections.value[index].offsetTop
-  scrollRef.value.scrollTo({
-    top: targetTop,
-    behavior: 'smooth' // 平滑滚动
-  })
+  activeTab.value = index
 }
-
-// 3. 滚动监听：Intersection Observer 自动更新ActiveTab
-onMounted(() => {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          // 找到当前进入视口的Section索引
-          const currentIndex = sections.value.findIndex(el => el === entry.target)
-          activeTab.value = currentIndex
-        }
-      })
-    },
-    {
-      threshold: 0.5 // 当Section可见度≥50%时触发
-    }
-  )
-
-  // 监听所有Section
-  sections.value.forEach(el => {
-    el && observer.observe(el)
-  })
-})
 </script>
 
 <style scoped>

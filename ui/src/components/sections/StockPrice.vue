@@ -35,7 +35,7 @@
     </el-card>
 
     <!-- 实时股价区域 -->
-    <el-card class="stock-list-section" shadow="hover">
+    <el-card class="stock-list-section" style="margin-top:20px" shadow="hover">
       <template #header>
         <div class="card-header">
           <span>实时股价</span>
@@ -80,10 +80,16 @@
         <el-table-column prop="change" label="涨跌幅">
           <template #default="{ row }">
             <el-tag 
-              :type="row.change > 0 ? 'success' : 'danger'"
+              :type="row.change > 0 ? 'success' : (row.change < 0 ? 'danger' : 'info')"
               size="small"
+              :style="{
+                color: row.change > 0 ? '#16a34a' : (row.change < 0 ? '#dc2626' : '#64748b'),
+                background: row.change > 0 ? 'rgba(22,163,74,0.08)' : (row.change < 0 ? 'rgba(220,38,38,0.08)' : 'rgba(100,116,139,0.08)'),
+                borderColor: row.change > 0 ? '#bbf7d0' : (row.change < 0 ? '#fecaca' : '#e3eaf2'),
+                fontWeight: 700
+              }"
             >
-              {{ row.change > 0 ? '+' : '' }}{{ row.change }} ({{ row.changePercent }})
+              {{ row.change > 0 ? '+' : (row.change < 0 ? '' : '') }}{{ row.change }} ({{ row.changePercent }})
             </el-tag>
           </template>
         </el-table-column>
@@ -153,7 +159,38 @@ const filteredStocks = computed(() => {
   )
 })
 
+onMounted(() => {
+  // getList()
+})
+
+
+
+
 // 方法
+import { onMounted, onUnmounted } from 'vue'
+
+let timer = null
+
+const getList = async () => {
+  const res = await axios.get(`/api/allStocks/${searchQuery.value}`)
+  stocks.value = res.data.stocks
+  // chartData.value = res.data.history
+  // totalNetWorth.value = res.data.totalNetWorth
+}
+
+// 定时器实现实时刷新
+onMounted(() => {
+  getList()
+  timer = setInterval(() => {
+    getList()
+  }, 5000) // 每5秒刷新一次，可根据需要调整
+})
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
+
+
 const handleSearch = async() => {
   const res = await axios.get(`/api/getStocks/${searchQuery.value}`)
   stocks = res.data.stocks
@@ -187,25 +224,6 @@ const tableRowClassName = ({ row, rowIndex }) => {
   background: linear-gradient(135deg, #f8f9fa 60%, #e0e7ff 100%);
 }
 
-.main-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #223354;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-}
-.main-title::after {
-  content: "";
-  display: block;
-  height: 4px;
-  width: 60px;
-  background: linear-gradient(90deg, #6366f1, #38bdf8);
-  border-radius: 2px;
-  margin-left: 16px;
-}
 
 .card-header {
   font-size: 1.5rem;

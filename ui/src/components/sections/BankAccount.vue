@@ -4,9 +4,7 @@
       <el-col>
         <h1 class="main-title">银行账户</h1>
       </el-col>
-      <el-col>
-        <el-button type="primary" :icon="Plus">添加账户</el-button>
-      </el-col>
+
     </el-row>
 
     <el-row :gutter="24">
@@ -65,21 +63,20 @@
       <template #header>
         <div class="card-header">
           <span>我的账户</span>
-          <el-button type="text" :icon="Refresh">刷新</el-button>
+          <el-button type="primary" :icon="Plus" @click="openAccountDialog('add')">添加账户</el-button>
         </div>
       </template>
 
       <el-table :data="accountData" style="width: 100%">
-        <el-table-column prop="name" label="账户名称" width="200">
+        <el-table-column prop="name" label="账户名称" align="center">
           <template #default="{ row }">
-            <div class="account-name">
-              <el-avatar :size="32" :src="row.icon" />
+            <div >
               <span>{{ row.name }}</span>
             </div>
           </template>
         </el-table-column>
         
-        <el-table-column prop="type" label="账户类型" width="120">
+        <el-table-column prop="type" label="账户类型" align="center">
           <template #default="{ row }">
             <el-tag :type="getAccountTypeColor(row.type)">
               {{ row.type }}
@@ -87,35 +84,66 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="balance" label="余额" width="150" />
-        <el-table-column prop="accountNumber" label="账号" width="200" />
+        <el-table-column prop="balance" label="余额"  align="center"/>
+        <el-table-column prop="accountNumber" label="账号"  align="center"/>
         
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" label="状态" align="center" >
           <template #default="{ row }">
             <el-tag 
               :type="row.status === '活跃' ? 'success' : 'warning'"
-              size="small"
+              size="large"
             >
               {{ row.status }}
             </el-tag>
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" width="200">
-          <template #default="{ row }">
-            <el-button type="text" size="small" :icon="View">查看</el-button>
-            <el-button type="text" size="small" :icon="Edit">编辑</el-button>
+        <el-table-column label="操作" align="center">
+          <template #default="{ row, $index }">
+            <el-button type="text" size="small" :icon="Edit" @click="openAccountDialog('edit', row, $index)">编辑</el-button>
             <el-button type="text" size="small" :icon="Money">转账</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+
+    <el-dialog v-model="accountDialogVisible" :title="dialogMode === 'add' ? '添加账户' : '编辑账户'" width="400px">
+      <el-form :model="accountForm" label-width="80px">
+        <el-form-item label="账户名称">
+          <el-input v-model="accountForm.name" />
+        </el-form-item>
+        <el-form-item label="账户类型">
+          <el-select v-model="accountForm.type" placeholder="请选择">
+            <el-option label="储蓄账户" value="储蓄账户" />
+            <el-option label="支票账户" value="支票账户" />
+            <el-option label="投资账户" value="投资账户" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="余额">
+          <el-input v-model="accountForm.balance" />
+        </el-form-item>
+        <el-form-item label="账号">
+          <el-input v-model="accountForm.accountNumber" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="accountForm.status">
+            <el-option label="活跃" value="活跃" />
+            <el-option label="冻结" value="冻结" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="accountDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAccountDialogConfirm">{{ dialogMode === 'add' ? '确定' : '保存' }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { Plus, Refresh, View, Edit, Money } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const accountData = ref([
   {
@@ -124,7 +152,6 @@ const accountData = ref([
     balance: '$28,450.00',
     accountNumber: '**** **** **** 1234',
     status: '活跃',
-    icon: 'https://via.placeholder.com/32'
   },
   {
     name: '建设银行支票账户',
@@ -132,7 +159,6 @@ const accountData = ref([
     balance: '$12,780.50',
     accountNumber: '**** **** **** 5678',
     status: '活跃',
-    icon: 'https://via.placeholder.com/32'
   },
   {
     name: '招商银行投资账户',
@@ -140,9 +166,52 @@ const accountData = ref([
     balance: '$4,000.00',
     accountNumber: '**** **** **** 9012',
     status: '活跃',
-    icon: 'https://via.placeholder.com/32'
   }
 ])
+
+const accountDialogVisible = ref(false)
+const dialogMode = ref('add') // 'add' or 'edit'
+const accountForm = ref({
+  name: '',
+  type: '',
+  balance: '',
+  accountNumber: '',
+  status: '活跃',
+  icon: ''
+})
+let editIndex = -1
+
+function openAccountDialog(mode, row = null, index = -1) {
+  dialogMode.value = mode
+  accountDialogVisible.value = true
+  if (mode === 'edit' && row) {
+    accountForm.value = { ...row }
+    editIndex = index
+  } else {
+    accountForm.value = {
+      name: '',
+      type: '',
+      balance: '',
+      accountNumber: '',
+      status: '活跃',
+      icon: ''
+    }
+    editIndex = -1
+  }
+}
+
+function handleAccountDialogConfirm() {
+  if (!accountForm.value.name || !accountForm.value.type || !accountForm.value.balance || !accountForm.value.accountNumber) {
+    ElMessage.warning('请填写完整信息')
+    return
+  }
+  if (dialogMode.value === 'add') {
+    accountData.value.push({ ...accountForm.value })
+  } else if (dialogMode.value === 'edit' && editIndex !== -1) {
+    accountData.value[editIndex] = { ...accountForm.value }
+  }
+  accountDialogVisible.value = false
+}
 
 const getAccountTypeColor = (type) => {
   const colors = {
@@ -203,11 +272,6 @@ const getAccountTypeColor = (type) => {
   color: #10b981;
 }
 
-.account-name {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
 :deep(.el-card__header) {
   padding: 16px 20px;

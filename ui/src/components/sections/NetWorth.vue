@@ -162,25 +162,7 @@ watch(days, fetchData)
 </script>
 
 <style scoped>
-.main-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #223354;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-}
-.main-title::after {
-  content: "";
-  display: block;
-  height: 4px;
-  width: 60px;
-  background: linear-gradient(90deg, #6366f1, #38bdf8);
-  border-radius: 2px;
-  margin-left: 16px;
-}
+
 .networth-section {
   width: 100%;
   height: 100%;
