@@ -1,13 +1,7 @@
 import express from 'express';
 import pool from '../config/db.js';
-
-// mock stockService
-const stockService = {
-  async getBatchPrices(symbols) {
-    // 模拟返回价格
-    return symbols.map(symbol => ({ symbol, price: Math.random() * 100 + 10 }));
-  }
-};
+import { getBatchPrices } from './stockService.js';
+import { BankModel } from './bankModel.js';
 
 const router = express.Router();
 
@@ -22,10 +16,13 @@ router.get('/:userId', async (req, res) => {
       [userId]
     );
 
+    // 获取银行账户
+    const bankAccounts = await BankModel.getBankAccounts(userId);
+
     // 更新实时价格
     if (stockHoldings.length > 0) {
       const symbols = stockHoldings.map((holding) => holding.symbol);
-      const prices = await stockService.getBatchPrices(symbols);
+      const prices = await getBatchPrices(symbols);
 
       for (let i = 0; i < stockHoldings.length; i++) {
         const holding = stockHoldings[i];
@@ -46,23 +43,39 @@ router.get('/:userId', async (req, res) => {
       [userId]
     );
 
-    // 计算当前资产配置
-    const totalValue = stockHoldings.reduce(
+    // 计算每类资产的当前市值
+    const assetTypeValueMap = {};
+    // 股票
+    assetTypeValueMap['stocks'] = stockHoldings.reduce(
       (sum, holding) => sum + holding.shares * holding.current_price,
       0
     );
+    // 其他类型（bonds, funds, cash）可根据实际业务补充
+    assetTypeValueMap['bonds'] = 0;
+    assetTypeValueMap['funds'] = 0;
+    assetTypeValueMap['cash'] = bankAccounts.reduce(
+      (sum, account) => sum + Number.parseFloat(account.balance), 0
+    );
 
-    const currentAllocation = [
-      {
-        name: '股票',
-        current: totalValue > 0 ? (totalValue / totalValue) * 100 : 0,
-        target:
-          allocationTargets.find((t) => t.asset_type === 'stocks')?.target_percentage || 60,
-        value: totalValue,
-        color: '#0088FE',
-      },
-      // 可以添加更多资产类型
-    ];
+    // 计算总资产
+    const totalValue = Object.values(assetTypeValueMap).reduce((sum, v) => sum + v, 0);
+
+    // 颜色映射
+    const colorMap = {
+      stocks: '#0088FE',
+      bonds: '#00C49F',
+      funds: '#FFBB28',
+      cash: '#FF8042'
+    };
+
+    // 动态生成 currentAllocation
+    const currentAllocation = allocationTargets.map(t => ({
+      name: t.asset_type,
+      current: totalValue > 0 ? (assetTypeValueMap[t.asset_type] / totalValue) * 100 : 0,
+      target: t.target_percentage,
+      value: assetTypeValueMap[t.asset_type],
+      color: colorMap[t.asset_type] || '#8884d8'
+    }));
 
     res.json({
       success: true,
@@ -70,6 +83,8 @@ router.get('/:userId', async (req, res) => {
         stockHoldings,
         currentAllocation,
         totalValue,
+        stockValue: assetTypeValueMap['stocks'],
+        cashValue: assetTypeValueMap['cash'],
       },
     });
   } catch (error) {

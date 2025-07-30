@@ -1,15 +1,8 @@
 import express from 'express';
 import pool from '../config/db.js';
+import { getBatchPrices } from './stockService.js';
 
 const router = express.Router();
-
-// mock stockService
-const stockService = {
-  async getBatchPrices(symbols) {
-    // 模拟返回价格
-    return symbols.map(symbol => ({ symbol, price: Math.random() * 100 + 10 }));
-  }
-};
 
 // 获取用户总资产概览
 router.get('/overview/:userId', async (req, res) => {
@@ -31,7 +24,7 @@ router.get('/overview/:userId', async (req, res) => {
     // 更新股票实时价格
     if (stockHoldings.length > 0) {
       const symbols = stockHoldings.map((holding) => holding.symbol);
-      const prices = await stockService.getBatchPrices(symbols);
+      const prices = await getBatchPrices(symbols);
 
       // 更新数据库中的当前价格
       for (let i = 0; i < stockHoldings.length; i++) {
@@ -79,6 +72,8 @@ router.get('/overview/:userId', async (req, res) => {
         bankAccounts,
         stockHoldings,
         netWorthHistory: netWorthHistory.reverse(),
+        totalGainLoss: 5000.25,
+        gainLossPercent: 5.26
       },
     });
   } catch (error) {
