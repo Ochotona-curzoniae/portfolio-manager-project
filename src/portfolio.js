@@ -180,6 +180,16 @@ router.get('/history/simple/symbols', async (req, res) => {
   }
 });
 
+// 获取单只股票近7日收盘价
+router.get('/history/:stock', async (req, res) => {
+  try {
+    const { stock } = req.params;
+    const result = await getLast7Closes(stock);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 
 export default router; 
