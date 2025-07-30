@@ -78,7 +78,6 @@ const initData = async () => {
   try {
     // 使用 await 直接获取响应结果
     const res = await axios.get(`/api/overview/${userId}`)
-    console.log('API响应:', res)
     
     if (res.data && res.data.success && res.data.data) {
       const data = res.data.data

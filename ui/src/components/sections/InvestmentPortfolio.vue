@@ -1,5 +1,5 @@
 <template>
-  <div class="portfolio-container">
+  <div class="portfolio-container" v-loading="loading" element-loading-text="正在加载数据..." element-loading-spinner="el-icon-loading" element-loading-background="rgba(255, 255, 255, 0.7)" element-loading-custom-class="portfolio-loading">
     <el-row class="header" justify="space-between" align="middle">
       <el-col>
         <h1 class="main-title">投资组合</h1>
@@ -10,40 +10,46 @@
     <el-row :gutter="24">
       <!-- 投资概览卡片 -->
       <el-col :span="8">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="stat-card">
           <template #header>
             <div class="card-header">
               <span>总资产</span>
             </div>
           </template>
-          <div class="stat-value">￥{{ totalValue }}</div>
-          <div :class="totalValueRate > 0 ? 'stat-change positive' : 'stat-change negative'">
-            {{ totalValueRate > 0 ? '+' : '' }}{{ totalValueRate }}%
-          </div>  
+          <div class="stat-content">
+            <div class="stat-value">￥{{ totalValue }}</div>
+            <div :class="totalValueRate > 0 ? 'stat-change positive' : 'stat-change negative'">
+              收益率：{{ totalValueRate > 0 ? '+' : '' }}{{ totalValueRate }}%
+            </div>
+          </div>
         </el-card>
       </el-col>
 
       <el-col :span="8">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="stat-card">
           <template #header>
             <div class="card-header">
               <span>今日收益</span>
             </div>
           </template>
-          <div class="stat-value">$1,245.80</div>
-          <div class="stat-change positive">+$89.45 (+7.7%)</div>
+          <div class="stat-content">
+            <div class="stat-value">$1,245.80</div>
+            <div class="stat-change positive">+$89.45 (+7.7%)</div>
+          </div>
         </el-card>
       </el-col>
 
       <el-col :span="8">
-        <el-card shadow="hover">
+        <el-card shadow="hover" class="stat-card">
           <template #header>
             <div class="card-header">
               <span>持仓数量</span>
             </div>
           </template>
-          <div class="stat-value">{{ holdingList.length-1 }}</div>
-          <!-- <div class="stat-change">3个新增</div> -->
+          <div class="stat-content">
+            <div class="stat-value">{{ holdingList.length }}</div>
+            <div class="stat-change">--</div>
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -198,7 +204,7 @@
         </div>
       </template>
     </el-dialog>
-
+<!-- 买入卖出Dialog -->
     <el-dialog
       v-model="tradeDialogVisible"
       :title="tradeType === 'buy' ? '买入股票' : '卖出股票'"
@@ -210,13 +216,13 @@
         <el-card class="form-card" shadow="never">
           <el-form :model="tradeForm" :rules="tradeRules" ref="tradeFormRef" label-width="100px" class="add-stock-form">
             <el-form-item label="股票名称">
-              <el-input v-model="tradeForm.name" disabled class="disabled-input" />
+              <el-input v-model="tradeForm.symbol" disabled class="disabled-input" />
             </el-form-item>
             <el-form-item label="交易类型">
               <el-input v-model="tradeTypeLabel" disabled class="disabled-input" />
             </el-form-item>
-            <el-form-item label="交易数量" prop="count">
-              <el-input-number v-model="tradeForm.count" :min="1" :max="100000" style="width: 100%;" class="count-input" />
+            <el-form-item label="交易数量" prop="shares">
+              <el-input-number v-model="tradeForm.shares" :min="1" :max="100000" style="width: 100%;" class="count-input" />
             </el-form-item>
             <el-form-item label="预计收益" v-if="tradeType === 'sell'">
               <el-input :value="expectedProfit" readonly class="profit-input" />
@@ -242,13 +248,15 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { Plus, Refresh, View, Edit } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
 
 const holdingList = ref([])
-const cash =ref(0)
-const stocks =ref(0)
-const currentAllocation=ref([])
-const totalValue=ref([])
-const totalValueRate=ref(-10)
+const cash = ref(0)
+const stocks = ref(0)
+const currentAllocation = ref([])
+const totalValue = ref([])
+const totalValueRate = ref(-10)
+const loading = ref(false)
 
 const dialogVisible = ref(false)
 const formRef = ref()
@@ -301,7 +309,6 @@ const selectedStockPrice = computed(() => {
 const onSubmit = () => {
   formRef.value.validate(valid => {
     if (valid) {
-      
       // axios.post('')
       dialogVisible.value = false
     }
@@ -310,25 +317,16 @@ const onSubmit = () => {
 
 // 资产分布饼图数据计算
 function getPieData() {
-  let cash = 10000, stock = 1000
-  holdingList.value.forEach(item => {
-    // 只区分现金和股票
-    if (item.name === '现金' || item.type === '现金') {
-      cash += Number((item.currentValue || '').toString().replace(/[^0-9.]/g, '') || 0)
-    } else {
-      stock += Number((item.currentValue || '').toString().replace(/[^0-9.]/g, '') || 0)
-    }
-  })
 
-  
   return [
-    { value: cash, name: '现金' },
-    { value: stock, name: '股票' }
+    { value: cash.value, name: '现金' },
+    { value: stocks.value, name: '股票' }
   ]
 }
 
 
-const getInitData = async ()=>{
+const getInitData = async () => {
+  loading.value = true
   const userId = 1
   try {
     // 使用 await 直接获取响应结果
@@ -337,27 +335,35 @@ const getInitData = async ()=>{
       const data = res.data.data
       
       // 更新响应式数据 - 字段名转换为驼峰
-      holdingList.value = (data.stockHoldings || []).map(item => ({
-        userId: item.user_id,
-        symbol: item.symbol,
-        companyName: item.company_name,
-        shares: item.shares,
-        avgPrice: Number(item.avg_price).toFixed(2),
-        currentPrice: Number(item.current_price).toFixed(2),
-        marketValue: Number(item.market_value).toFixed(2),
-        gainLoss: item.gain_loss,
-        gainLossPercent: Number(item.gain_loss_percent).toFixed(2),
-        createdAt: item.created_at,
-        updatedAt: item.updated_at
-      }))
-      currentAllocation.value=data.currentAllocation||[]
-      totalValue.value=Number(data.totalValue||0).toFixed(2)
+      holdingList.value = (data.stockHoldings || []).map(item => {
+        return {
+          userId: item.user_id,
+          symbol: item.symbol,
+          companyName: item.company_name,
+          shares: item.shares,
+          avgPrice: Number(item.avg_price).toFixed(2),
+          currentPrice: Number(item.current_price).toFixed(2),
+          marketValue: Number(item.market_value).toFixed(2),
+          gainLoss: item.gain_loss,
+          gainLossPercent: Number(item.gain_loss_percent).toFixed(2),
+          createdAt: item.created_at,
+          updatedAt: item.updated_at
+        }
+      })
+      // 修正：应先找到对应项再取 value
+      cash.value = (data.currentAllocation || []).find(item => item.name === 'cash')?.value || 0
+      stocks.value = (data.currentAllocation || []).find(item => item.name === 'stocks')?.value || 0
+
+      currentAllocation.value = data.currentAllocation || []
+      totalValue.value = Number(data.totalValue || 0).toFixed(2)
       
     } else {
       console.error('API返回数据格式不正确:', res.data)
     }
   } catch (error) {
     console.error('获取数据失败:', error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -416,8 +422,11 @@ onMounted(() => {
 const tradeDialogVisible = ref(false)
 const tradeFormRef = ref()
 const tradeForm = ref({
-  name: '',
-  count: 1
+  userId:1,
+  symbol: '',
+  companyName: '',
+  price: 0,
+  shares: 1
 })
 
 
@@ -589,20 +598,43 @@ const updateStockChart = () => {
 
 // 打开买入/卖出Dialog
 const openTradeDialog = (row, type) => {
-  tradeForm.value.name = row.name
-  tradeForm.value.count = 1
+  tradeForm.value={
+    userId:row.userId,
+    symbol:row.symbol,
+    companyName:row.companyName,
+    price:row.currentPrice,
+  }
   tradeType.value = type
   tradeDialogVisible.value = true
 }
 
 // 提交买入/卖出
 const onTradeSubmit = () => {
-  tradeFormRef.value.validate(valid => {
+  tradeFormRef.value.validate(async (valid) => {
     if (valid) {
-      // 这里可以根据 tradeType.value 判断是买入还是卖出
-      // 发送请求到后端
-      // axios.post('/api/trade', { ...tradeForm.value, type: tradeType.value })
-      tradeDialogVisible.value = false
+      try {
+        // 这里可以根据 tradeType.value 判断是买入还是卖出
+        // 发送请求到后端
+        if(tradeType.value==='buy'){
+          const res = await axios.post('/api/portfolio/buy', { ...tradeForm.value})
+          if(res.data.success){
+            ElMessage.success('买入成功')
+          }else{
+            ElMessage.error('买入失败')
+          }
+        }else{
+          const res = await axios.post('/api/portfolio/sell', { ...tradeForm.value})
+          if(res.data.success){
+            ElMessage.success('卖出成功')
+          }else{
+            ElMessage.error('卖出失败')
+          }
+        }
+        tradeDialogVisible.value = false
+        getInitData()
+      } catch (error) {
+        ElMessage.error(tradeType.value === 'buy' ? '买入失败' : '卖出失败')
+      }
     }
   })
 }
@@ -615,6 +647,35 @@ const onTradeSubmit = () => {
   padding: 32px;
   overflow-y: auto;
   background: #f8f9fa;
+  position: relative;
+}
+
+/* 自定义loading样式 */
+:deep(.portfolio-loading) {
+  backdrop-filter: blur(3px);
+}
+
+:deep(.portfolio-loading .el-loading-mask) {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:deep(.portfolio-loading .el-loading-spinner) {
+  .el-loading-text {
+    color: #409EFF;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  
+  .el-icon-loading {
+    font-size: 32px;
+    color: #409EFF;
+  }
 }
 
 .header {
@@ -641,23 +702,47 @@ const onTradeSubmit = () => {
   color: #223354;
 }
 
-.stat-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #223354;
-  margin-bottom: 8px;
-}
 
-.stat-change {
-  font-size: 0.9rem;
-  color: #64748b;
-}
+
+
 
 .stat-change.positive {
   color: #10b981;
 }
 .stat-change.negative {
   color: #f30d0d;
+}
+
+/* 统计卡片统一样式 */
+.stat-card {
+  height: 100%;
+}
+
+.stat-card :deep(.el-card__body) {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-content {
+  text-align: center;
+  width: 100%;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #223354;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.stat-change {
+  font-size: 0.9rem;
+  color: #64748b;
+  min-height: 20px;
+  line-height: 1.2;
 }
 .investment-name {
   display: flex;
