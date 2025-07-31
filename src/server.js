@@ -199,4 +199,4 @@ app.put('/api/bank', async (req, res) => {
 //   res.json({ success: true, data: results });
 // });
 
-app.listen(4000, () => console.log('running on http://localhost:3000'));
+app.listen(3000, () => console.log('running on http://localhost:3000'));

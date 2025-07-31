@@ -33,8 +33,8 @@
             </div>
           </template>
           <div class="stat-content">
-            <div class="stat-value">$1,245.80</div>
-            <div class="stat-change positive">+$89.45 (+7.7%)</div>
+            <div class="stat-value">￥1,245.80</div>
+            <div class="stat-change positive">+￥89.45 (+7.7%)</div>
           </div>
         </el-card>
       </el-col>
@@ -186,6 +186,11 @@
                 <el-form-item label="投资总额">
                   <el-input :value="totalPrice" readonly class="total-price-input" />
                 </el-form-item>
+                <el-form-item label="支付方式" prop="bankCardId">
+                  <el-select v-model="form.bankCardId" placeholder="请选择卡号" style="width: 100%;" filterable class="stock-select" @change="onBankChange">
+                    <el-option v-for="item in bankList" :key="item.bankName" :label="item.bankName+':'+item.accountNumber" :value="item.id" />
+                  </el-select>
+                </el-form-item>
               </el-form>
             </el-card>
           </el-col>
@@ -230,11 +235,18 @@
             <el-form-item label="交易数量" prop="shares">
               <el-input-number v-model="tradeForm.shares" :min="1" :max="100000" style="width: 100%;" class="count-input" />
             </el-form-item>
+            
+
             <el-form-item label="预计收益" v-if="tradeType === 'sell'">
               <el-input :value="expectedProfit" readonly class="profit-input" />
             </el-form-item>
             <el-form-item label="预计收益" v-else>
               <el-input value="-" readonly class="profit-input" />
+            </el-form-item>
+            <el-form-item label="支付方式" prop="bankCardId" v-if="tradeType === 'buy'">
+              <el-select v-model="tradeForm.bankCardId" placeholder="请选择卡号" style="width: 100%;" filterable class="stock-select">
+                <el-option v-for="item in bankList" :key="item.bankName" :label="item.bankName+':'+item.accountNumber" :value="item.id" />
+              </el-select>
             </el-form-item>
           </el-form>
         </el-card>
@@ -261,31 +273,37 @@ const cash = ref(0)
 const stocks = ref(0)
 const currentAllocation = ref([])
 const totalValue = ref([])
-const totalValueRate = ref(-10)
+const totalValueRate = ref(10)
 const loading = ref(false)
 
 const dialogVisible = ref(false)
 const formRef = ref()
 const stockList = ref([])
+const bankList = ref([])
 
-const getAllStocks = async () => {
+const getStocksAndBanks = async () => {
   try {
-    // const res = await axios.get('/api/stocks')
-    // stockList.value = res.data
-    stockList.value=[{
-      symbol:'TSLA',
-      price:158
-    },{
-      symbol:'AAPL',
-      price:164
-    }]
+    const userId=1
+    // 获取卡号
+    const res = await axios.get(`/api/bank/${userId}`)
+    bankList.value = res.data.data.map(item => {
+      return {
+        id: item.id,
+        bankName: item.bank_name,
+        accountNumber: item.account_number
+      }
+    })
+    // 获取股票
+    const res1 = await axios.get(`/api/portfolio/history/simple/symbols/default`)
+    stockList.value = res1.data.data
+
   } catch (e) {
     stockList.value = []
   }
 }
 
 const openAddInvestment = () => {
-  getAllStocks()
+  getStocksAndBanks()
   dialogVisible.value = true
 }
 
@@ -296,8 +314,9 @@ const form = ref({
 })
 
 const rules = {
-  name: [{ required: true, message: '请选择股票', trigger: 'change' }],
-  count: [{ required: true, message: '请输入买入股数', trigger: 'blur' }]
+  symbol: [{ required: true, message: '请选择股票', trigger: 'change' }],
+  shares: [{ required: true, message: '请输入买入股数', trigger: 'blur' }],
+  bankCardId: [{ required: true, message: '请选择支付方式', trigger: 'change' }]
 }
 
 // 计算总价
@@ -321,7 +340,8 @@ const onSubmit = () => {
         symbol: form.value.symbol,
         companyName: form.value.companyName,
         shares: form.value.shares,
-        price: selectedStockPrice.value
+        price: selectedStockPrice.value,
+        bankCardId: form.value.bankCardId
       })
       if(res.data.success){
         ElMessage.success('买入成功')
@@ -464,7 +484,8 @@ const tradeForm = ref({
   symbol: '',
   companyName: '',
   price: 0,
-  shares: 1
+  shares: 1,
+  bankCardId: ''
 })
 
 
@@ -486,7 +507,8 @@ const expectedProfit = computed(() => {
 })
 
 const tradeRules = {
-  count: [{ required: true, message: '请输入数量', trigger: 'blur' }]
+  shares: [{ required: true, message: '请输入交易数量', trigger: 'blur' }],
+  bankCardId: [{ required: true, message: '请选择支付方式', trigger: 'change' }]
 }
 
 // 图表相关数据
@@ -638,11 +660,15 @@ const updateStockChart = () => {
 
 // 打开买入/卖出Dialog
 const openTradeDialog = (row, type) => {
+  if (type === 'buy') {
+    getStocksAndBanks() // 只在买入时加载银行列表
+  }
   tradeForm.value={
     userId:row.userId,
     symbol:row.symbol,
     companyName:row.companyName,
     price:row.currentPrice,
+    bankCardId: ''
   }
   tradeType.value = type
   tradeDialogVisible.value = true
@@ -656,14 +682,23 @@ const onTradeSubmit = () => {
         // 这里可以根据 tradeType.value 判断是买入还是卖出
         // 发送请求到后端
         if(tradeType.value==='buy'){
-          const res = await axios.post('/api/portfolio/buy', { ...tradeForm.value})
+          const res = await axios.post('/api/portfolio/buy', { 
+            ...tradeForm.value,
+            bankCardId: tradeForm.value.bankCardId
+          })
           if(res.data.success){
             ElMessage.success('买入成功')
           }else{
             ElMessage.error('买入失败')
           }
         }else{
-          const res = await axios.post('/api/portfolio/sell', { ...tradeForm.value})
+          const res = await axios.post('/api/portfolio/sell', { 
+            userId: tradeForm.value.userId,
+            symbol: tradeForm.value.symbol,
+            companyName: tradeForm.value.companyName,
+            price: tradeForm.value.price,
+            shares: tradeForm.value.shares
+          })
           if(res.data.success){
             ElMessage.success('卖出成功')
           }else{

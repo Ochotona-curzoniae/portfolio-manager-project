@@ -101,7 +101,7 @@ router.get('/:userId', async (req, res) => {
 // 买入股票
 router.post('/buy', async (req, res) => {
   try {
-    const { userId, symbol, shares, price, companyName } = req.body;
+    const { userId, symbol, shares, price, companyName, bankCardId } = req.body;
 
     const connection = await pool.getConnection();
     await connection.beginTransaction();
@@ -112,6 +112,28 @@ router.post('/buy', async (req, res) => {
         'SELECT * FROM stock_holdings WHERE user_id = ? AND symbol = ?',
         [userId, symbol]
       );
+
+      // 检查银行账户
+      const [bankAccount] = await connection.execute(
+        'SELECT * FROM bank_accounts WHERE id = ?',
+        [bankCardId]
+      );
+      if (bankAccount.length === 0) {
+        return res.status(500).json({ success: false, error: '交易失败,银行账户不存在' });
+      }
+      // 检查银行账户余额
+      if (bankAccount[0].account_type === 'credit' && (bankAccount[0].balance + bankAccount[0].credit_limit) < shares * price) {
+        return res.status(500).json({ success: false, error: '交易失败,信用卡账户余额不足' });
+      }
+      else if (bankAccount[0].balance < shares * price) {
+        return res.status(500).json({ success: false, error: '交易失败,卡上账户余额不足' });
+      }
+
+      // 更新银行账户余额
+        await connection.execute(
+          'UPDATE bank_accounts SET balance = balance - ? WHERE id = ?',
+          [shares * price, bankCardId]
+        );
 
       if (existingHolding.length > 0) {
         // 更新现有持仓
@@ -131,6 +153,32 @@ router.post('/buy', async (req, res) => {
           [userId, symbol, companyName, shares, price, price]
         );
       }
+
+      // 更新资产
+    // 获取银行资产
+    const bankAccounts = await BankModel.getBankAccounts(userId);
+    const [row] = await connection.execute(('select * from net_worth_history where user_id= ? and record_date=?'),[userId, new Date().toISOString().split('T')[0]])
+    const bankAssets = bankAccounts.reduce((sum, account) => sum + Number.parseFloat(account.balance), 0);
+    // 获取持股价值
+    const [stockHoldings] = await connection.execute(
+      'SELECT * FROM stock_holdings WHERE user_id = ?',
+      [userId]
+    );
+    const stockAssets = stockHoldings.reduce((sum, holding) => sum + holding.shares * holding.current_price, 0);
+    const totalAssets = bankAssets + stockAssets;
+
+    if (row.length > 0) {
+      await connection.execute(
+        'UPDATE net_worth_history SET total_assets = ? ,total_liabilities = ? WHERE id = ?',
+        [totalAssets, bankAssets, row[0].id]
+      );
+    }else{
+      await connection.execute(
+        'INSERT INTO net_worth_history (user_id, record_date, total_assets, total_liabilities ,created_at) VALUES (?, ?, ?, ?, ?)',
+        [userId, new Date().toISOString().split('T')[0], totalAssets, bankAssets , formatDateTime(new Date())]
+      );
+    }
+
 
       // 记录交易
       await connection.execute(

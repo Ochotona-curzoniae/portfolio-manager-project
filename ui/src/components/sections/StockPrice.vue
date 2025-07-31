@@ -171,7 +171,7 @@ let timer = null
 const getList = async () => {
   try {
     loading.value = true
-    const res = await axios.get(`/api/portfolio/history/simple/symbols`)
+    const res = await axios.get(`/api/portfolio/history/simple/symbols/default`)
     await nextTick(() => {
       stocks.value = res.data.data
     })
@@ -193,14 +193,18 @@ onMounted(() => {
 const handleSearch = async() => {
   try {
     loading.value = true
-    if(searchQuery.value===''){
+    if(searchQuery.value==''|searchQuery.value=='undefined'){
       await getList()
       return
     }
     const res = await axios.get(`/api/portfolio/history/simple/${searchQuery.value}`)
     console.log(res.data)
     // stocks 是一个 ref，需要通过 .value 赋值
-    stocks.value = res.data.data
+    if(res.data.success==true){
+      stocks.value = [res.data.data]
+    }else{
+      stocks.value = []
+    }
   } catch (error) {
     ElMessage.error('搜索股票失败')
     console.error('搜索股票失败:', error)
