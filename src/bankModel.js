@@ -86,4 +86,33 @@ export class BankModel {
       throw new Error('添加交易记录失败: ' + error.message);
     }
   }
+
+  // 更新银行账户
+  static async updateBankAccount(
+    userId,
+    bankName,
+    accountType,
+    accountNumber,
+    balance,
+    interestRate = 0,
+    creditLimit = 0
+  ) {
+    try {
+      const [result] = await pool.execute(
+        `UPDATE bank_accounts 
+         SET bank_name = ?, account_type = ?, balance = ?, interest_rate = ?, credit_limit = ?
+         WHERE user_id = ? AND account_number = ?`,
+        [bankName, accountType, balance, interestRate, creditLimit, userId, accountNumber]
+      );
+
+      if (result.affectedRows === 0) {
+        throw new Error('未找到要更新的银行账户');
+      }
+
+      return result.affectedRows;
+    } catch (error) {
+      throw new Error('更新银行账户失败: ' + error.message);
+    }
+  }
+
 } 

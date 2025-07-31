@@ -12,10 +12,16 @@
         {{ tab }}
       </div>
     </aside>
-    <!-- 右侧只显示当前Tab对应的内容 -->
-    <main class="section">
+    
+    <!-- 中间主内容区域 -->
+    <main class="main-content">
       <component :is="sectionComponents[activeTab]" />
     </main>
+    
+    <!-- 右侧股票价格组件 -->
+    <aside class="stock-sidebar">
+      <StockPrice />
+    </aside>
   </div>
 </template>
 
@@ -25,18 +31,15 @@ import NetWorth from './sections/NetWorth.vue'
 import StockPrice from './sections/StockPrice.vue'
 import InvestmentPortfolio from './sections/InvestmentPortfolio.vue'
 import BankAccount from './sections/BankAccount.vue'
-import AssetAnalysis from './sections/AssetAnalysis.vue'
 import MarketTrends from './sections/MarketTrends.vue'
 
 const sectionComponents = [
   NetWorth,
-  StockPrice,
   InvestmentPortfolio,
   BankAccount,
-  AssetAnalysis,
   MarketTrends
 ]
-const tabs = ref(['总资产概览', '当前股票价格', '投资组合', '银行账户', '资产分析', '市场动态'])
+const tabs = ref(['总资产概览', '投资组合', '银行账户', '市场动态'])
 const activeTab = ref(0)
 const handleTabClick = (index) => {
   activeTab.value = index
@@ -64,6 +67,7 @@ const handleTabClick = (index) => {
   border-top-right-radius: 32px;
   border-bottom-right-radius: 32px;
   align-items: center;
+  z-index: 10;
 }
 
 .tab {
@@ -114,21 +118,37 @@ const handleTabClick = (index) => {
   opacity: 1;
 }
 
-/* 右侧滚动容器 */
-.scroll-container {
+/* 中间主内容区域 */
+.main-content {
   flex: 1;
-  overflow-y: scroll;
-  scroll-behavior: smooth;
-  padding: 0 0 0 32px;
-  background: #f5f6fa;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none !important;
+  position: relative;
+  transition: background 0.5s;
+  padding: 0 24px;
+}
+
+/* 右侧股票价格侧边栏 */
+.stock-sidebar {
+  width: 400px;
+  height: 100vh;
+  background: #fff;
+  border-left: 1px solid #e3eaf2;
+  box-shadow: -4px 0 24px rgba(34,51,84,0.08);
+  overflow-y: auto;
+  z-index: 5;
+  position: relative;
 }
 
 /* 自定义滚动条 */
-.scroll-container::-webkit-scrollbar {
+.stock-sidebar::-webkit-scrollbar {
   width: 8px;
   background: transparent;
 }
-.scroll-container::-webkit-scrollbar-thumb {
+.stock-sidebar::-webkit-scrollbar-thumb {
   background: #e3eaf2;
   border-radius: 8px;
 }

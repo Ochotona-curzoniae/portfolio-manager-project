@@ -4,49 +4,21 @@
       <el-col>
         <h1 class="main-title">市场动态</h1>
       </el-col>
-      <el-col>
-        <el-button type="primary" :icon="Refresh">刷新数据</el-button>
-      </el-col>
     </el-row>
 
     <el-row :gutter="24">
       <!-- 市场概览 -->
-      <el-col :span="8">
+      <el-col :span="8" v-for="index in marketTrends.indices" :key="index.name">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>道琼斯指数</span>
+              <span>{{ index.name }}</span>
             </div>
           </template>
-          <div class="market-value">34,580.25</div>
-          <div class="market-change positive">+245.80 (+0.72%)</div>
-          <el-progress :percentage="72" :color="progressColors" />
-        </el-card>
-      </el-col>
-
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span>纳斯达克</span>
-            </div>
-          </template>
-          <div class="market-value">14,230.45</div>
-          <div class="market-change positive">+189.30 (+1.35%)</div>
-          <el-progress :percentage="85" :color="progressColors" />
-        </el-card>
-      </el-col>
-
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <template #header>
-            <div class="card-header">
-              <span>标普500</span>
-            </div>
-          </template>
-          <div class="market-value">4,580.15</div>
-          <div class="market-change negative">-12.45 (-0.27%)</div>
-          <el-progress :percentage="45" :color="progressColors" />
+          <div class="market-value">{{ index.value }}</div>  
+          <div class="market-change" :class="index.changePercent >= 0 ? 'positive' : 'negative'">
+            {{ index.changePercent>0?'+':'' }}({{ index.changePercent }}%)
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -61,10 +33,10 @@
       </template>
 
       <el-table :data="hotStocks" style="width: 100%">
-        <el-table-column prop="symbol" label="代码" width="100" />
-        <el-table-column prop="name" label="名称" width="150" />
-        <el-table-column prop="price" label="价格" width="120" />
-        <el-table-column prop="change" label="涨跌幅" width="120">
+        <el-table-column prop="symbol" label="代码"  />
+        <el-table-column prop="name" label="名称"  />
+        <el-table-column prop="price" label="价格"  />
+        <el-table-column prop="change" label="涨跌幅" >
           <template #default="{ row }">
             <el-tag 
               :type="row.change >= 0 ? 'success' : 'danger'"
@@ -74,7 +46,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="volume" label="成交量" width="120" />
+        <el-table-column prop="volume" label="成交量"  />
         <el-table-column label="操作" width="120">
           <template #default="{ row }">
             <el-button type="text" size="small" :icon="View">查看</el-button>
@@ -115,6 +87,21 @@
 <script setup>
 import { ref } from 'vue'
 import { Refresh, TrendCharts, View, Document } from '@element-plus/icons-vue'
+import axios from 'axios'
+import { onMounted } from 'vue'
+
+const marketTrends = ref({
+})
+
+const getMarketTrends = async () => {
+  const res = await axios.get('/api/stocks/market-movers')
+  console.log(res.data.data)
+  marketTrends.value = res.data.data
+}
+
+onMounted(() => {
+  getMarketTrends()
+})
 
 const progressColors = [
   { color: '#f56c6c', percentage: 20 },

@@ -1,13 +1,5 @@
 <template>
   <div class="stock-price-container">
-    <!-- 顶部标题和用户头像 -->
-    <el-row class="header" justify="space-between" align="middle">
-      <el-col>
-        <h1 class="main-title">当前股票价格</h1>
-      </el-col>
- 
-    </el-row>
-
     <!-- 股票搜索区域 -->
     <el-card class="search-section" shadow="hover">
       <template #header>
@@ -17,17 +9,17 @@
       </template>
       <p class="section-subtitle">搜索股票代码或公司名称</p>
       <el-row :gutter="12">
-        <el-col :span="6">
+        <el-col :span="16">
           <el-input
             v-model="searchQuery"
             placeholder="输入股票代码或公司名称"
             :prefix-icon="Search"
-            @keyup.enter="handleSearch"
             clearable
+            size="small"
           />
         </el-col>
-        <el-col :span="6">
-          <el-button type="primary" @click="handleSearch" :icon="Search">
+        <el-col :span="8">
+          <el-button type="primary" @click="handleSearch" :icon="Search" :loading="loading" size="small">
             搜索
           </el-button>
         </el-col>
@@ -44,12 +36,17 @@
       <p class="section-subtitle">主要股票的实时价格信息</p>
       
       <el-table 
-        :data="filteredStocks" 
+        :data="stocks" 
         style="width: 100%"
         :row-class-name="tableRowClassName"
         @row-click="handleRowClick"
+        v-loading="loading"
+        element-loading-text="正在加载股票数据..."
+        element-loading-spinner="el-icon-loading"
+        element-loading-background="rgba(255, 255, 255, 0.8)"
+        size="small"
       >
-        <el-table-column width="60">
+        <!-- <el-table-column width="40">
           <template #default="{ row }">
             <el-button
               :icon="row.isFavorite ? Star : StarFilled"
@@ -59,25 +56,22 @@
               @click.stop="toggleFavorite(row.symbol)"
             />
           </template>
-        </el-table-column>
+        </el-table-column> -->  
         
-        <el-table-column prop="symbol" label="代码">
+        <el-table-column prop="symbol" label="代码" >
           <template #default="{ row }">
             <div class="stock-symbol">{{ row.symbol }}</div>
             <div class="stock-name">{{ row.name }}</div>
           </template>
         </el-table-column>
         
-        <el-table-column prop="volume" label="成交量" />
-        <el-table-column prop="marketCap" label="市值" />
-        
-        <el-table-column prop="price" label="当前价格">
+        <el-table-column prop="price" label="价格" >
           <template #default="{ row }">
             <div class="current-price">{{ row.price }}</div>
           </template>
         </el-table-column>
         
-        <el-table-column prop="change" label="涨跌幅">
+        <el-table-column prop="change" label="涨跌" >
           <template #default="{ row }">
             <el-tag 
               :type="row.change > 0 ? 'success' : (row.change < 0 ? 'danger' : 'info')"
@@ -89,7 +83,7 @@
                 fontWeight: 700
               }"
             >
-              {{ row.change > 0 ? '+' : (row.change < 0 ? '' : '') }}{{ row.change }} ({{ row.changePercent }})
+              {{ row.change > 0 ? '+' : (row.change < 0 ? '' : '') }}{{ row.change }}
             </el-tag>
           </template>
         </el-table-column>
@@ -99,12 +93,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { Search, Star, StarFilled } from '@element-plus/icons-vue'
+import { ref, computed, nextTick } from 'vue'
+import { Loading, Search, Star, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 
 // 响应式数据
 const searchQuery = ref('')
+// const stocks = ref([])
+const loading = ref(false)
 const stocks = ref([
   {
     symbol: 'AAPL',
@@ -149,18 +146,18 @@ const stocks = ref([
 ])
 
 // 计算属性：过滤股票
-const filteredStocks = computed(() => {
-  if (!searchQuery.value) return stocks.value
+// const filteredStocks = computed(() => {
+//   if (!searchQuery.value) return stocks.value
   
-  const query = searchQuery.value.toLowerCase()
-  return stocks.value.filter(stock => 
-    stock.symbol.toLowerCase().includes(query) ||
-    stock.name.toLowerCase().includes(query)
-  )
-})
+//   const query = searchQuery.value.toLowerCase()
+//   return stocks.value.filter(stock => 
+//     stock.symbol.toLowerCase().includes(query) ||
+//     stock.name.toLowerCase().includes(query)
+//   )
+// })
 
 onMounted(() => {
-  // getList()
+  getList()
 })
 
 
@@ -172,30 +169,44 @@ import { onMounted, onUnmounted } from 'vue'
 let timer = null
 
 const getList = async () => {
-  const res = await axios.get(`/api/allStocks/${searchQuery.value}`)
-  stocks.value = res.data.stocks
-  // chartData.value = res.data.history
-  // totalNetWorth.value = res.data.totalNetWorth
+  try {
+    loading.value = true
+    const res = await axios.get(`/api/portfolio/history/simple/symbols`)
+    await nextTick(() => {
+      stocks.value = res.data.data
+    })
+  } catch (error) {
+    ElMessage.error('获取股票数据失败')
+    console.error('获取股票数据失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 // 定时器实现实时刷新
 onMounted(() => {
   getList()
-  timer = setInterval(() => {
-    getList()
-  }, 5000) // 每5秒刷新一次，可根据需要调整
-})
 
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
 })
 
 
 const handleSearch = async() => {
-  // const res = await axios.get(`/api/getStocks/${searchQuery.value}`)
-  // stocks = res.data.stocks
-  // chartData.value = res.data.history
-  // totalNetWorth.value = res.data.totalNetWorth
+  try {
+    loading.value = true
+    if(searchQuery.value===''){
+      await getList()
+      return
+    }
+    const res = await axios.get(`/api/portfolio/history/simple/${searchQuery.value}`)
+    console.log(res.data)
+    // stocks 是一个 ref，需要通过 .value 赋值
+    stocks.value = res.data.data
+  } catch (error) {
+    ElMessage.error('搜索股票失败')
+    console.error('搜索股票失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 const toggleFavorite = (symbol) => {
@@ -219,14 +230,13 @@ const tableRowClassName = ({ row, rowIndex }) => {
 .stock-price-container {
   width: 100%;
   height: 100%;
-  padding: 32px;
+  padding: 16px;
   overflow-y: auto;
-  background: linear-gradient(135deg, #f8f9fa 60%, #e0e7ff 100%);
+  background: #fff;
 }
 
-
 .card-header {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: #223354;
   display: flex;
@@ -235,39 +245,41 @@ const tableRowClassName = ({ row, rowIndex }) => {
 }
 
 .section-subtitle {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: #94a3b8;
-  margin: 0 0 16px 0;
-  letter-spacing: 1px;
+  margin: 0 0 12px 0;
+  letter-spacing: 0.5px;
 }
 
 .el-card {
-  border-radius: 16px !important;
-  box-shadow: 0 4px 24px 0 rgba(99,102,241,0.08);
+  border-radius: 12px !important;
+  box-shadow: 0 2px 12px 0 rgba(99,102,241,0.08);
   transition: box-shadow 0.3s;
+  margin-bottom: 16px;
 }
 .el-card:hover {
-  box-shadow: 0 8px 32px 0 rgba(99,102,241,0.16);
+  box-shadow: 0 4px 20px 0 rgba(99,102,241,0.16);
 }
 
 :deep(.el-table) {
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
-  font-size: 1.08rem;
+  font-size: 0.9rem;
 }
 :deep(.el-table th) {
   background: #f1f5f9;
   color: #223354;
-  font-weight: 700;
-  font-size: 1.08rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 0;
 }
 :deep(.el-table tr:hover) {
   background: linear-gradient(90deg, #e0e7ff 0%, #f8fafc 100%) !important;
   transition: background 0.3s;
 }
 :deep(.el-table td) {
-  padding: 14px 0;
-  font-size: 1.08rem;
+  padding: 8px 0;
+  font-size: 0.85rem;
 }
 
 .favorite-row {
@@ -275,18 +287,30 @@ const tableRowClassName = ({ row, rowIndex }) => {
   transition: background 0.3s;
 }
 
+.stock-symbol {
+  font-weight: 600;
+  color: #223354;
+  font-size: 0.9rem;
+}
+
+.stock-name {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
 .current-price {
-  font-size: 1.3rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #2563eb;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 :deep(.el-tag) {
-  font-size: 1.05rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  border-radius: 8px;
-  padding: 2px 12px;
+  border-radius: 6px;
+  padding: 1px 8px;
   background: linear-gradient(90deg, #f87171 0%, #fbbf24 100%);
   color: #fff;
   border: none;

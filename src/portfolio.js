@@ -5,6 +5,11 @@ import { BankModel } from './bankModel.js';
 
 const router = express.Router();
 
+// 格式化日期时间为 YYYY-MM-DD HH:mm:ss 格式
+function formatDateTime(date) {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 // 获取投资组合详情
 router.get('/:userId', async (req, res) => {
   try {
@@ -147,6 +152,77 @@ router.post('/buy', async (req, res) => {
   }
 });
 
+// 卖出股票
+router.post('/sell', async (req, res) => {
+
+  const { userId, symbol, shares, price, companyName } = req.body;
+  if(shares <= 0 ||userId === undefined || symbol === undefined || price === undefined || companyName === undefined){
+    return res.status(500).json({ success: false, error: '交易失败,请求参数错误' });
+  }
+  const connection = await pool.getConnection();
+  const [stockHoldings] = await connection.execute(
+    'SELECT * FROM stock_holdings WHERE user_id = ?',
+    [userId]
+  );
+
+  const holding = stockHoldings.find(h => h.symbol === symbol);
+  if (stockHoldings.length === 0 || holding.shares < shares) {
+    return res.status(500).json({ success: false, error: '交易失败' });
+  }
+  const newShares = holding.shares - shares;
+  const newAvgPrice = (holding.shares * holding.avg_price - shares * price) / newShares;
+  // 开启事务
+  await connection.beginTransaction();
+  try {
+    // 更新持仓
+    await connection.execute(
+      'UPDATE stock_holdings SET shares = ?, avg_price = ? WHERE id = ?',
+      [newShares, newAvgPrice, holding.id]
+    );
+
+    // 更新银行账户
+    const bankAccounts = await BankModel.getBankAccounts(userId);
+    if (bankAccounts.length > 0) {
+      await connection.execute(
+        'UPDATE bank_accounts SET balance = balance + ? WHERE id = ?',
+        [shares * price, bankAccounts[0].id]
+      );
+    }
+    // 更新资产
+    // 获取银行资产
+    const [row] = await connection.execute(('select * from net_worth_history where user_id= ? and record_date=?'),[userId, new Date().toISOString().split('T')[0]])
+    const bankAssets = bankAccounts.reduce((sum, account) => sum + Number.parseFloat(account.balance), 0);
+    // 获取持股价值
+    const stockAssets = stockHoldings.reduce((sum, holding) => sum + holding.shares * holding.current_price, 0);
+    const totalAssets = bankAssets + stockAssets;
+
+    if (row.length > 0) {
+      await connection.execute(
+        'UPDATE net_worth_history SET total_assets = ? ,total_liabilities = ? WHERE id = ?',
+        [totalAssets, bankAssets, row[0].id]
+      );
+    }else{
+      await connection.execute(
+        'INSERT INTO net_worth_history (user_id, record_date, total_assets, total_liabilities ,created_at) VALUES (?, ?, ?, ?, ?)',
+        [userId, new Date().toISOString().split('T')[0], totalAssets, bankAssets , formatDateTime(new Date())]
+      );
+    }
+
+    // 记录交易
+    await connection.execute(
+      'INSERT INTO transactions (user_id, transaction_type, symbol, shares, price, amount, description) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [userId, 'sell', symbol, shares, price, shares * price, `卖出 ${companyName} 股票`]
+    );
+    await connection.commit();
+    res.json({ success: true, message: '交易成功' });
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+});
 // 股票历史收盘价测试接口
 router.get('/history/:symbol', async (req, res) => {
   try {

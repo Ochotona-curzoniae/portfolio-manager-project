@@ -1,5 +1,5 @@
 <template>
-  <div class="networth-section">
+  <div class="networth-section" v-loading="loading" element-loading-text="加载中..." element-loading-spinner="el-icon-loading" element-loading-background="rgba(255, 255, 255, 0.8)">
     <el-row class="header" justify="space-between" align="middle">
       <el-col>
         <h1 class="main-title">总资产概览</h1>
@@ -43,24 +43,16 @@ import axios from 'axios'
 import * as echarts from 'echarts'
 
 const days = ref(30)
-const totalNetWorth = ref(2317371)
-const investmentValue=ref(12345)
-const totalGainLoss=ref(10)
-const gainLossPercent= ref(10)
-const bankBalance=ref(0)
+const loading = ref(false)
+const totalNetWorth = ref(0)
+const investmentValue = ref(0)
+const totalGainLoss = ref(0)
+const gainLossPercent = ref(0)
+const bankBalance = ref(0)
 
 const chartRef = ref(null)
 let chartInstance = null
-const chartData = ref([
-  { record_date: '2024-06-29', net_worth: 2100000 },
-  { record_date: '2024-06-30', net_worth: 2100000 },
-  { record_date: '2024-07-01', net_worth: 2100000 },
-  { record_date: '2024-07-02', net_worth: 2100000 },
-  { record_date: '2024-07-03', net_worth: 2100000 },
-  { record_date: '2024-07-04', net_worth: 2100000 },
-  { record_date: '2024-07-05', net_worth: 2100000 },
-
-])
+const chartData = ref([])
 
 // 计算统计数据
 // const maxValue = computed(() => Math.max(...chartData.value.map(d => d.value)))
@@ -82,13 +74,44 @@ const changePercent = computed(() => {
   return ((last - first) / first) * 100
 })
 
-const fetchData = async () => {
-  const userId=1
-  // 这里替换为实际的API调用
-  // const res = await axios.get(`/api/networth/{userId}`)
-  // chartData.value = res.data.history
-  // totalNetWorth.value = res.data.totalNetWorth
-  renderChart()
+const initData = async () => {
+  const userId = 1
+  loading.value = true
+  try {
+    // 使用 await 直接获取响应结果
+    const res = await axios.get(`/api/overview/${userId}`)
+    
+    if (res.data && res.data.success && res.data.data) {
+      const data = res.data.data
+      
+      // 更新响应式数据 - 根据后端实际返回的字段
+      totalNetWorth.value = data.totalNetWorth || 0
+      investmentValue.value = data.investmentValue || 0
+      bankBalance.value = data.bankBalance || 0
+      totalGainLoss.value = data.netWorthHistory[data.netWorthHistory.length-1].total_assets-data.netWorthHistory[0].total_assets || 0
+      gainLossPercent.value = totalGainLoss.value/data.netWorthHistory[0].total_assets*100 || 0
+      
+      // 更新图表数据 - 使用后端返回的 netWorthHistory，并格式化 record_date
+      if (data.netWorthHistory && Array.isArray(data.netWorthHistory)) {
+        chartData.value = data.netWorthHistory.map(item => ({
+          record_date: item.record_date
+            ? new Date(item.record_date).toISOString().slice(0, 10)
+            : '',
+          net_worth: item.total_assets
+        }))
+        console.log('更新图表数据:', chartData.value)
+      }
+      
+      // 数据更新后重新渲染图表
+      renderChart()
+    } else {
+      console.error('API返回数据格式不正确:', res.data)
+    }
+  } catch (error) {
+    console.error('获取数据失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 const renderChart = () => {
@@ -123,7 +146,7 @@ const renderChart = () => {
       axisLabel: {
         color: '#64748b',
         fontSize: 12,
-        formatter: value => `￥${(value / 1000000).toFixed(1)}M`
+        formatter: value => `￥${(value).toFixed(1)}`
       }
     },
     series: [{
@@ -148,17 +171,17 @@ const renderChart = () => {
       textStyle: { color: '#fff' },
       formatter: (params) => {
         const data = params[0]
-        return `￥{data.name}<br/>￥${data.value.toLocaleString()}`
+        return `￥${data.value.toLocaleString()}`
       }
     }
   })
 }
 
 onMounted(() => {
-  fetchData()
+  initData()
 })
 
-watch(days, fetchData)
+watch(days, initData)
 </script>
 
 <style scoped>

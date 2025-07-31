@@ -16,8 +16,10 @@
               <span>总余额</span>
             </div>
           </template>
-          <div class="stat-value">$45,230.50</div>
-          <div class="stat-change">本月 +$2,450</div>
+          <div class="stat-value">￥{{ formatCurrency(accountStats.totalBalance) }}</div>
+          <div class="stat-change" :class="{ positive: accountStats.totalBalance > 0 }">
+            {{ accountStats.totalBalance > 0 ? '+' : '' }}￥{{ Math.abs(accountStats.totalBalance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
+          </div>
         </el-card>
       </el-col>
 
@@ -28,8 +30,8 @@
               <span>储蓄账户</span>
             </div>
           </template>
-          <div class="stat-value">$28,450.00</div>
-          <div class="stat-change positive">+$1,200</div>
+          <div class="stat-value">￥{{ formatCurrency(accountStats.savingsBalance) }}</div>
+          <div class="stat-change positive">+￥{{ accountStats.savingsBalance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}</div>
         </el-card>
       </el-col>
 
@@ -37,11 +39,13 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>支票账户</span>
+              <span>定期存款</span>
             </div>
           </template>
-          <div class="stat-value">$12,780.50</div>
-          <div class="stat-change">-$450</div>
+          <div class="stat-value">￥{{ formatCurrency(accountStats.fixedDepositBalance) }}</div>
+          <div class="stat-change" :class="{ positive: accountStats.fixedDepositBalance > 0 }">
+            {{ accountStats.fixedDepositBalance > 0 ? '+' : '' }}￥{{ accountStats.fixedDepositBalance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
+          </div>
         </el-card>
       </el-col>
 
@@ -49,11 +53,13 @@
         <el-card shadow="hover">
           <template #header>
             <div class="card-header">
-              <span>投资账户</span>
+              <span>信用卡</span>
             </div>
           </template>
-          <div class="stat-value">$4,000.00</div>
-          <div class="stat-change positive">+$700</div>
+          <div class="stat-value">￥{{ formatCurrency(accountStats.creditCardBalance) }}</div>
+          <div class="stat-change" :class="{ positive: accountStats.creditCardBalance > 0 }">
+            {{ accountStats.creditCardBalance > 0 ? '+' : '' }}￥{{ accountStats.creditCardBalance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -76,10 +82,10 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="type" label="账户类型" align="center">
+        <el-table-column prop="accountType" label="账户类型" align="center">
           <template #default="{ row }">
-            <el-tag :type="getAccountTypeColor(row.type)">
-              {{ row.type }}
+            <el-tag :type="getAccountTypeColor(row.accountType)">
+              {{ getAccountTypeName(row.accountType) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -87,21 +93,20 @@
         <el-table-column prop="balance" label="余额"  align="center"/>
         <el-table-column prop="accountNumber" label="账号"  align="center"/>
         
-        <el-table-column prop="status" label="状态" align="center" >
+        <el-table-column prop="interestRate" label="利率" align="center" >
           <template #default="{ row }">
             <el-tag 
-              :type="row.status === '活跃' ? 'success' : 'warning'"
+              :type="row.interestRate > 2 ? 'success' : 'warning'"
               size="large"
             >
-              {{ row.status }}
+              {{ row.interestRate }}
             </el-tag>
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" align="center">
+        <el-table-column label="操作" align="center"> 
           <template #default="{ row, $index }">
             <el-button type="text" size="small" :icon="Edit" @click="openAccountDialog('edit', row, $index)">编辑</el-button>
-            <el-button type="text" size="small" :icon="Money">转账</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -113,10 +118,10 @@
           <el-input v-model="accountForm.name" />
         </el-form-item>
         <el-form-item label="账户类型">
-          <el-select v-model="accountForm.type" placeholder="请选择">
-            <el-option label="储蓄账户" value="储蓄账户" />
-            <el-option label="支票账户" value="支票账户" />
-            <el-option label="投资账户" value="投资账户" />
+          <el-select v-model="accountForm.accountType" placeholder="请选择">
+            <el-option label="储蓄账户" value="savings" />
+            <el-option label="定期存款" value="fixed_deposit" />
+            <el-option label="信用卡" value="credit_card" />
           </el-select>
         </el-form-item>
         <el-form-item label="余额">
@@ -125,11 +130,11 @@
         <el-form-item label="账号">
           <el-input v-model="accountForm.accountNumber" />
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="accountForm.status">
-            <el-option label="活跃" value="活跃" />
-            <el-option label="冻结" value="冻结" />
-          </el-select>
+        <el-form-item label="信用限额" v-if="accountForm.accountType === 'credit_card'">
+          <el-input v-model="accountForm.creditLimit" placeholder="请输入信用限额" />
+        </el-form-item>
+        <el-form-item label="利率">
+          <el-input v-model="accountForm.interestRate" placeholder="请输入信用限额" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -141,45 +146,73 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { Plus, Refresh, View, Edit, Money } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 
-const accountData = ref([
-  {
-    name: '工商银行储蓄账户',
-    type: '储蓄账户',
-    balance: '$28,450.00',
-    accountNumber: '**** **** **** 1234',
-    status: '活跃',
-  },
-  {
-    name: '建设银行支票账户',
-    type: '支票账户',
-    balance: '$12,780.50',
-    accountNumber: '**** **** **** 5678',
-    status: '活跃',
-  },
-  {
-    name: '招商银行投资账户',
-    type: '投资账户',
-    balance: '$4,000.00',
-    accountNumber: '**** **** **** 9012',
-    status: '活跃',
+const accountData = ref([])
+
+// 计算属性：根据账户数据计算各种余额
+const accountStats = computed(() => {
+  const stats = {
+    totalBalance: 0,
+    savingsBalance: 0,
+    fixedDepositBalance: 0,
+    creditCardBalance: 0
   }
-])
+  
+  accountData.value.forEach(account => {
+    const balance = parseFloat(account.balance) || 0
+    
+    // 根据账户类型累加余额
+    switch (account.accountType) {
+      case 'savings':
+        stats.savingsBalance += balance
+        break
+      case 'fixed_deposit':
+        stats.fixedDepositBalance += balance
+        break
+      case 'credit_card':
+        stats.creditCardBalance += balance
+        break
+    }
+    
+    // 总余额（信用卡余额为负数）
+    if (account.accountType === 'credit_card') {
+      stats.totalBalance += 0
+    } else {
+      stats.totalBalance += balance
+    }
+  })
+  
+  return stats
+})
 
 const accountDialogVisible = ref(false)
 const dialogMode = ref('add') // 'add' or 'edit'
 const accountForm = ref({
   name: '',
-  type: '',
+  accountType: '',
   balance: '',
   accountNumber: '',
-  status: '活跃',
-  icon: ''
+  interestRate: '0',
+  icon: '',
+  creditLimit: '0'
 })
 let editIndex = -1
+const loading = ref(false)
+
+onMounted(() => {
+  getAccountData()
+})
+
+// 监听账户类型变化，自动重置信用限额
+watch(() => accountForm.value.accountType, (newType) => {
+  if (newType !== 'credit_card') {
+    accountForm.value.creditLimit = '0'
+  }
+})
 
 function openAccountDialog(mode, row = null, index = -1) {
   dialogMode.value = mode
@@ -190,36 +223,115 @@ function openAccountDialog(mode, row = null, index = -1) {
   } else {
     accountForm.value = {
       name: '',
-      type: '',
+      accountType: '',
       balance: '',
       accountNumber: '',
-      status: '活跃',
-      icon: ''
+      interestRate: '0',
+      icon: '',
+      creditLimit: '0'
     }
     editIndex = -1
   }
 }
 
-function handleAccountDialogConfirm() {
-  if (!accountForm.value.name || !accountForm.value.type || !accountForm.value.balance || !accountForm.value.accountNumber) {
+async function handleAccountDialogConfirm() {
+  const userId=1
+  if (!accountForm.value.name || !accountForm.value.accountType || !accountForm.value.balance || !accountForm.value.accountNumber) {
     ElMessage.warning('请填写完整信息')
     return
   }
   if (dialogMode.value === 'add') {
-    accountData.value.push({ ...accountForm.value })
+    let formData = {
+      userId: userId,
+      bankName: accountForm.value.name,
+      accountType: accountForm.value.accountType,
+      balance: accountForm.value.balance,
+      accountNumber: accountForm.value.accountNumber,
+      currency: "CNY",
+      interestRate: accountForm.value.interestRate,
+      creditLimit: accountForm.value.accountType === 'credit_card' ? accountForm.value.creditLimit : '0'
+    }
+   
+    const res = await axios.post('/api/bank', formData)
+    if (res.status === 200) {
+      ElMessage.success('添加成功')
+    } else {
+      ElMessage.error('添加失败')
+    }
+    // accountData.value.push({ ...accountForm.value })
   } else if (dialogMode.value === 'edit' && editIndex !== -1) {
-    accountData.value[editIndex] = { ...accountForm.value }
+    const res = await axios.put('/api/bank', {
+      userId: userId,
+      bankName: accountForm.value.name,
+      accountType: accountForm.value.accountType,
+      balance: accountForm.value.balance,
+      accountNumber: accountForm.value.accountNumber,
+      interestRate: accountForm.value.interestRate,
+      creditLimit: accountForm.value.accountType === 'credit_card' ? accountForm.value.creditLimit : '0'
+    })
+    if (res.status === 200) {
+      ElMessage.success('编辑成功')
+    } else {
+      ElMessage.error('编辑失败')
+    }
+    //  accountData.value[editIndex] = { ...accountForm.value }
   }
   accountDialogVisible.value = false
+  getAccountData()
+}
+
+const getAccountData = async () => {
+  loading.value = true
+  try {
+    const userId = 1
+    const res = await axios.get(`/api/bank/${userId}`)
+    if (res.data.success) {
+      const data=res.data.data
+      console.log(data)
+      accountData.value = data.map(item => {
+        return {
+        name: item.bank_name,
+        accountType: item.account_type,
+        balance: item.balance,
+        accountNumber: item.account_number,
+        interestRate: item.interest_rate,
+        creditLimit: item.credit_limit || '0'
+      }
+    })
+    } else {
+      ElMessage.error('获取数据失败')
+    }
+  } catch (error) {
+    ElMessage.error('网络请求失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const getAccountTypeColor = (type) => {
   const colors = {
-    '储蓄账户': 'success',
-    '支票账户': 'primary',
-    '投资账户': 'warning'
+    'saving': 'success',
+    'fixed_deposit': 'primary',
+    'credit_card': 'warning'
   }
   return colors[type] || 'info'
+}
+
+const getAccountTypeName = (type) => {
+  const names = {
+    'savings': '储蓄账户',
+    'fixed_deposit': '定期存款',
+    'credit_card': '信用卡'
+  }
+  return names[type] || type
+}
+
+// 格式化金额显示
+const formatCurrency = (amount) => {
+  return amount.toLocaleString('en-US', { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  })
 }
 </script>
 
