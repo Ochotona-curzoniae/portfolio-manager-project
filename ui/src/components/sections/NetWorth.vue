@@ -1,5 +1,5 @@
 <template>
-  <div class="networth-section">
+  <div class="networth-section" v-loading="loading" element-loading-text="加载中..." element-loading-spinner="el-icon-loading" element-loading-background="rgba(255, 255, 255, 0.8)">
     <el-row class="header" justify="space-between" align="middle">
       <el-col>
         <h1 class="main-title">总资产概览</h1>
@@ -43,10 +43,11 @@ import axios from 'axios'
 import * as echarts from 'echarts'
 
 const days = ref(30)
-const totalNetWorth = ref(2317371)
-const investmentValue = ref(12345)
-const totalGainLoss = ref(10)
-const gainLossPercent = ref(10)
+const loading = ref(false)
+const totalNetWorth = ref(0)
+const investmentValue = ref(0)
+const totalGainLoss = ref(0)
+const gainLossPercent = ref(0)
 const bankBalance = ref(0)
 
 const chartRef = ref(null)
@@ -75,6 +76,7 @@ const changePercent = computed(() => {
 
 const initData = async () => {
   const userId = 1
+  loading.value = true
   try {
     // 使用 await 直接获取响应结果
     const res = await axios.get(`/api/overview/${userId}`)
@@ -107,6 +109,8 @@ const initData = async () => {
     }
   } catch (error) {
     console.error('获取数据失败:', error)
+  } finally {
+    loading.value = false
   }
 }
 

@@ -124,6 +124,26 @@ app.post('/api/bank', async (req, res) => {
   }
 });
 
+// 编辑银行账户
+app.put('/api/bank', async (req, res) => {
+  try {
+    const { userId, bankName, accountType, accountNumber, balance, interestRate, creditLimit } = req.body;
+    await BankModel.updateBankAccount(
+      userId,
+      bankName,
+      accountType,
+      accountNumber,
+      balance,
+      interestRate,
+      creditLimit
+    );
+    res.json({ success: true, message: 'Bank account updated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
 // 批量获取股票行情
 app.get('/stocks', async (req, res) => {
   // 支持 /stocks?symbols=AAPL,TSLA,GOOGL

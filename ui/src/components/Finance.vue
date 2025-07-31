@@ -25,7 +25,6 @@ import NetWorth from './sections/NetWorth.vue'
 import StockPrice from './sections/StockPrice.vue'
 import InvestmentPortfolio from './sections/InvestmentPortfolio.vue'
 import BankAccount from './sections/BankAccount.vue'
-import AssetAnalysis from './sections/AssetAnalysis.vue'
 import MarketTrends from './sections/MarketTrends.vue'
 
 const sectionComponents = [
@@ -33,10 +32,9 @@ const sectionComponents = [
   StockPrice,
   InvestmentPortfolio,
   BankAccount,
-  AssetAnalysis,
   MarketTrends
 ]
-const tabs = ref(['总资产概览', '当前股票价格', '投资组合', '银行账户', '资产分析', '市场动态'])
+const tabs = ref(['总资产概览', '当前股票价格', '投资组合', '银行账户', '市场动态'])
 const activeTab = ref(0)
 const handleTabClick = (index) => {
   activeTab.value = index

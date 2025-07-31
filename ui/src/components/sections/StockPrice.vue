@@ -22,12 +22,11 @@
             v-model="searchQuery"
             placeholder="输入股票代码或公司名称"
             :prefix-icon="Search"
-            @keyup.enter="handleSearch"
             clearable
           />
         </el-col>
         <el-col :span="6">
-          <el-button type="primary" @click="handleSearch" :icon="Search">
+          <el-button type="primary" @click="handleSearch" :icon="Search" :loading="loading">
             搜索
           </el-button>
         </el-col>
@@ -44,10 +43,14 @@
       <p class="section-subtitle">主要股票的实时价格信息</p>
       
       <el-table 
-        :data="filteredStocks" 
+        :data="stocks" 
         style="width: 100%"
         :row-class-name="tableRowClassName"
         @row-click="handleRowClick"
+        v-loading="loading"
+        element-loading-text="正在加载股票数据..."
+        element-loading-spinner="el-icon-loading"
+        element-loading-background="rgba(255, 255, 255, 0.8)"
       >
         <el-table-column width="60">
           <template #default="{ row }">
@@ -100,67 +103,70 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Search, Star, StarFilled } from '@element-plus/icons-vue'
+import { Loading, Search, Star, StarFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 
 // 响应式数据
 const searchQuery = ref('')
-const stocks = ref([
-  {
-    symbol: 'AAPL',
-    name: '苹果公司',
-    volume: '52.3M',
-    marketCap: '$2.75T',
-    price: '$175.43',
-    change: 2.34,
-    changePercent: '1.35%',
-    isFavorite: true
-  },
-  {
-    symbol: 'TSLA',
-    name: '特斯拉',
-    volume: '89.1M',
-    marketCap: '$789.2B',
-    price: '$248.5',
-    change: -5.67,
-    changePercent: '-2.23%',
-    isFavorite: true
-  },
-  {
-    symbol: 'MSFT',
-    name: '微软',
-    volume: '28.7M',
-    marketCap: '$2.81T',
-    price: '$378.85',
-    change: 4.12,
-    changePercent: '1.1%',
-    isFavorite: true
-  },
-  {
-    symbol: 'GOOGL',
-    name: '谷歌',
-    volume: '31.2M',
-    marketCap: '$1.74T',
-    price: '$138.21',
-    change: 1.85,
-    changePercent: '1.36%',
-    isFavorite: false
-  }
-])
+const stocks = ref([])
+const loading = ref(false)
+// const stocks = ref([
+//   {
+//     symbol: 'AAPL',
+//     name: '苹果公司',
+//     volume: '52.3M',
+//     marketCap: '$2.75T',
+//     price: '$175.43',
+//     change: 2.34,
+//     changePercent: '1.35%',
+//     isFavorite: true
+//   },
+//   {
+//     symbol: 'TSLA',
+//     name: '特斯拉',
+//     volume: '89.1M',
+//     marketCap: '$789.2B',
+//     price: '$248.5',
+//     change: -5.67,
+//     changePercent: '-2.23%',
+//     isFavorite: true
+//   },
+//   {
+//     symbol: 'MSFT',
+//     name: '微软',
+//     volume: '28.7M',
+//     marketCap: '$2.81T',
+//     price: '$378.85',
+//     change: 4.12,
+//     changePercent: '1.1%',
+//     isFavorite: true
+//   },
+//   {
+//     symbol: 'GOOGL',
+//     name: '谷歌',
+//     volume: '31.2M',
+//     marketCap: '$1.74T',
+//     price: '$138.21',
+//     change: 1.85,
+//     changePercent: '1.36%',
+//     isFavorite: false
+//   }
+// ])
 
 // 计算属性：过滤股票
-const filteredStocks = computed(() => {
-  if (!searchQuery.value) return stocks.value
+// const filteredStocks = computed(() => {
+//   if (!searchQuery.value) return stocks.value
   
-  const query = searchQuery.value.toLowerCase()
-  return stocks.value.filter(stock => 
-    stock.symbol.toLowerCase().includes(query) ||
-    stock.name.toLowerCase().includes(query)
-  )
-})
+//   const query = searchQuery.value.toLowerCase()
+//   return stocks.value.filter(stock => 
+//     stock.symbol.toLowerCase().includes(query) ||
+//     stock.name.toLowerCase().includes(query)
+//   )
+// })
 
 onMounted(() => {
-  // getList()
+  getList()
 })
 
 
@@ -172,30 +178,42 @@ import { onMounted, onUnmounted } from 'vue'
 let timer = null
 
 const getList = async () => {
-  const res = await axios.get(`/api/allStocks/${searchQuery.value}`)
-  stocks.value = res.data.stocks
-  // chartData.value = res.data.history
-  // totalNetWorth.value = res.data.totalNetWorth
+  try {
+    loading.value = true
+    const res = await axios.get(`/api/portfolio/history/simple/symbols`)
+    stocks.value = res.data.data
+  } catch (error) {
+    ElMessage.error('获取股票数据失败')
+    console.error('获取股票数据失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 // 定时器实现实时刷新
 onMounted(() => {
   getList()
-  timer = setInterval(() => {
-    getList()
-  }, 5000) // 每5秒刷新一次，可根据需要调整
-})
 
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
 })
 
 
 const handleSearch = async() => {
-  // const res = await axios.get(`/api/getStocks/${searchQuery.value}`)
-  // stocks = res.data.stocks
-  // chartData.value = res.data.history
-  // totalNetWorth.value = res.data.totalNetWorth
+  try {
+    loading.value = true
+    if(searchQuery.value===''){
+      await getList()
+      return
+    }
+    const res = await axios.get(`/api/portfolio/history/simple/${searchQuery.value}`)
+    console.log(res.data)
+    // stocks 是一个 ref，需要通过 .value 赋值
+    stocks.value = res.data.data
+  } catch (error) {
+    ElMessage.error('搜索股票失败')
+    console.error('搜索股票失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 const toggleFavorite = (symbol) => {
