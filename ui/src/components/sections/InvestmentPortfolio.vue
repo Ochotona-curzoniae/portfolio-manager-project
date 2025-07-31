@@ -240,8 +240,8 @@
             <el-form-item label="预计收益" v-if="tradeType === 'sell'">
               <el-input :value="expectedProfit" readonly class="profit-input" />
             </el-form-item>
-            <el-form-item label="预计收益" v-else>
-              <el-input value="-" readonly class="profit-input" />
+            <el-form-item label="预估交易额" v-else>
+              <el-input :value="expectedProfit" readonly class="profit-input" />
             </el-form-item>
             <el-form-item label="支付方式" prop="bankCardId" v-if="tradeType === 'buy'">
               <el-select v-model="tradeForm.bankCardId" placeholder="请选择卡号" style="width: 100%;" filterable class="stock-select">
@@ -353,6 +353,7 @@ const onSubmit = () => {
         }
       })
       .catch(error => {
+        console.log(error)
         if (error.response && error.response.data && error.response.data.error) {
           ElMessage.error(`买入失败:${error.response.data.error}`)
         } else {
@@ -504,7 +505,6 @@ const tradeType = ref('buy') // 'buy' 或 'sell'
 const tradeTypeLabel = computed(() => tradeType.value === 'buy' ? '买入' : '卖出')
 // 收益率计算
 const expectedProfit = computed(() => {
-  if (tradeType.value !== 'sell') return '-'
   // 查找当前股票的持仓信息
   const holding = holdingList.value.find(item => item.symbol === tradeForm.value.symbol)
   if (!holding) return '-'
@@ -513,6 +513,8 @@ const expectedProfit = computed(() => {
   const avgPrice = holding.avgPrice || 0
   const shares = tradeForm.value.shares || 0
   const profit = (currentPrice - avgPrice) * shares
+  if (tradeType.value !== 'sell') return (currentPrice*shares).toFixed(2)
+
   return profit.toFixed(2)
 })
 
@@ -521,37 +523,9 @@ const tradeRules = {
   bankCardId: [{ required: true, message: '请选择支付方式', trigger: 'change' }]
 }
 
-// 图表相关数据
-// const selectedPeriod = ref('7D')
-// const chartPeriods = ref([
-//   { label: '7天', value: '7D' }
-// ])
 
 // 模拟股票历史数据 - 只展示过去7天
-const stockHistoryData = ref({
-  'tsl': {
-    '7D': [
-      { date: '2024-01-01', price: 150 },
-      { date: '2024-01-02', price: 152 },
-      { date: '2024-01-03', price: 155 },
-      { date: '2024-01-04', price: 153 },
-      { date: '2024-01-05', price: 158 },
-      { date: '2024-01-06', price: 160 },
-      { date: '2024-01-07', price: 158 }
-    ]
-  },
-  'apple': {
-    '7D': [
-      { date: '2024-01-01', price: 160 },
-      { date: '2024-01-02', price: 162 },
-      { date: '2024-01-03', price: 165 },
-      { date: '2024-01-04', price: 163 },
-      { date: '2024-01-05', price: 168 },
-      { date: '2024-01-06', price: 170 },
-      { date: '2024-01-07', price: 164 }
-    ]
-  }
-})
+const stockHistoryData = ref({})
 
 let stockChart = null
 
@@ -695,12 +669,16 @@ const onTradeSubmit = () => {
           const res = await axios.post('/api/portfolio/buy', { 
             ...tradeForm.value,
             bankCardId: tradeForm.value.bankCardId
+          }).then(res=>{
+            if(res.data.success){
+              ElMessage.success('买入成功')
+            }else{
+              ElMessage.error('买入失败')
+            }
+          }).catch(error=>{
+            ElMessage.error(`买入失败:${error.response.data.error}`)
           })
-          if(res.data.success){
-            ElMessage.success('买入成功')
-          }else{
-            ElMessage.error('买入失败')
-          }
+ 
         }else{
           const res = await axios.post('/api/portfolio/sell', { 
             userId: tradeForm.value.userId,

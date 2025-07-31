@@ -119,14 +119,14 @@ router.post('/buy', async (req, res) => {
         [bankCardId]
       );
       if (bankAccount.length === 0) {
-        return res.status(500).json({ success: false, error: '交易失败,银行账户不存在' });
+        throw new Error('交易失败,银行账户不存在')
       }
       // 检查银行账户余额
       if (bankAccount[0].account_type === 'credit' && (bankAccount[0].balance + bankAccount[0].credit_limit) < shares * price) {
-        return res.status(500).json({ success: false, error: '交易失败,信用卡账户余额不足' });
+        throw new Error('交易失败,信用卡账户余额不足')
       }
       else if (bankAccount[0].balance < shares * price) {
-        return res.status(500).json({ success: false, error: '交易失败,卡上账户余额不足' });
+        throw new Error('交易失败,卡上账户余额不足')
       }
 
       // 更新银行账户余额
