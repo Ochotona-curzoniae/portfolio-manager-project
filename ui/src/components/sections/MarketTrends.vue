@@ -23,44 +23,86 @@
       </el-col>
     </el-row>
 
-    <!-- 热门股票 -->
-    <el-card class="hot-stocks" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span>热门股票</span>
-          <el-button type="text" :icon="TrendCharts">更多</el-button>
-        </div>
-      </template>
+    <!-- 热门股票（分为三个板块） -->
+    <el-row :gutter="24" class="hot-stocks-container">
+      <!-- 涨幅最大板块 -->
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>涨幅最大</span>
+            </div>
+          </template>
 
-      <el-table :data="hotStocks" style="width: 100%">
-        <el-table-column prop="symbol" label="代码"  />
-        <el-table-column prop="name" label="名称"  />
-        <el-table-column prop="price" label="价格"  />
-        <el-table-column prop="change" label="涨跌幅" >
-          <template #default="{ row }">
-            <el-tag 
-              :type="row.change >= 0 ? 'success' : 'danger'"
-              size="small"
-            >
-              {{ row.change >= 0 ? '+' : '' }}{{ row.change }}%
-            </el-tag>
+          <el-table :data="topGainers" style="width: 100%">
+            <el-table-column prop="symbol" label="代码" width="80" />
+            <el-table-column prop="name" label="名称" />
+            <el-table-column prop="price" label="价格" width="100" />
+            <el-table-column prop="change" label="涨跌幅" width="100">
+              <template #default="{ row }">
+                <el-tag type="success" size="small">
+                  +{{ row.change }}%
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+
+      <!-- 上涨股票板块 -->
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>上涨股票</span>
+            </div>
           </template>
-        </el-table-column>
-        <el-table-column prop="volume" label="成交量"  />
-        <el-table-column label="操作" width="120">
-          <template #default="{ row }">
-            <el-button type="text" size="small" :icon="View">查看</el-button>
+
+          <el-table :data="risingStocks" style="width: 100%">
+            <el-table-column prop="symbol" label="代码" width="80" />
+            <el-table-column prop="name" label="名称" />
+            <el-table-column prop="price" label="价格" width="100" />
+            <el-table-column prop="change" label="涨跌幅" width="100">
+              <template #default="{ row }">
+                <el-tag type="success" size="small">
+                  +{{ row.change }}%
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+
+      <!-- 下跌股票板块 -->
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>下跌股票</span>
+            </div>
           </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+
+          <el-table :data="fallingStocks" style="width: 100%">
+            <el-table-column prop="symbol" label="代码" width="80" />
+            <el-table-column prop="name" label="名称" />
+            <el-table-column prop="price" label="价格" width="100" />
+            <el-table-column prop="change" label="涨跌幅" width="100">
+              <template #default="{ row }">
+                <el-tag type="danger" size="small">
+                  {{ row.change }}%
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- 市场新闻 -->
     <el-card class="market-news" shadow="hover">
       <template #header>
         <div class="card-header">
           <span>市场新闻</span>
-          <el-button type="text" :icon="Document">全部</el-button>
         </div>
       </template>
 
@@ -85,38 +127,43 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Refresh, TrendCharts, View, Document } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { onMounted } from 'vue'
 
 const marketTrends = ref({
+  indices: [] // 实际数据会从API获取
 })
 
 const getMarketTrends = async () => {
-  const res = await axios.get('/api/stocks/market-movers')
-  console.log(res.data.data)
-  marketTrends.value = res.data.data
+  try {
+    const res = await axios.get('/api/stocks/market-movers')
+    marketTrends.value = res.data.data
+  } catch (error) {
+    console.error('获取市场趋势数据失败:', error)
+    // 可以在这里设置默认数据或显示错误提示
+    marketTrends.value = {
+      indices: [
+        { name: '上证指数', value: '3,285.47', changePercent: 0.32 },
+        { name: '深证成指', value: '11,050.32', changePercent: -0.15 },
+        { name: '创业板指', value: '2,243.68', changePercent: 0.57 }
+      ]
+    }
+  }
 }
 
 onMounted(() => {
   getMarketTrends()
 })
 
-const progressColors = [
-  { color: '#f56c6c', percentage: 20 },
-  { color: '#e6a23c', percentage: 40 },
-  { color: '#5cb87a', percentage: 60 },
-  { color: '#1989fa', percentage: 80 },
-  { color: '#6f7ad3', percentage: 100 }
-]
-
-const hotStocks = ref([
+// 股票数据
+const allStocks = ref([
   {
     symbol: 'AAPL',
     name: '苹果公司',
     price: '$175.43',
-    change: 1.35,
+    change: 3.52,
     volume: '52.3M'
   },
   {
@@ -139,8 +186,67 @@ const hotStocks = ref([
     price: '$138.21',
     change: 1.36,
     volume: '31.2M'
+  },
+  {
+    symbol: 'AMZN',
+    name: '亚马逊',
+    price: '$178.45',
+    change: 2.89,
+    volume: '42.5M'
+  },
+  {
+    symbol: 'META',
+    name: '元宇宙',
+    price: '$345.12',
+    change: -1.78,
+    volume: '23.9M'
+  },
+  {
+    symbol: 'NVDA',
+    name: '英伟达',
+    price: '$987.65',
+    change: 5.23,
+    volume: '67.8M'
+  },
+  {
+    symbol: 'BABA',
+    name: '阿里巴巴',
+    price: '$78.90',
+    change: -0.45,
+    volume: '19.2M'
+  },
+  {
+    symbol: 'PDD',
+    name: '拼多多',
+    price: '$156.78',
+    change: 2.15,
+    volume: '34.6M'
   }
 ])
+
+// 计算属性：将股票分为三个板块
+const topGainers = computed(() => {
+  // 筛选出涨幅大于0的股票，按涨幅降序排列，取前3名作为涨幅最大
+  return [...allStocks.value]
+    .filter(stock => stock.change > 0)
+    .sort((a, b) => b.change - a.change)
+    .slice(0, 3)
+})
+
+const risingStocks = computed(() => {
+  // 筛选出涨幅大于0但不在涨幅最大列表中的股票
+  const topGainerSymbols = topGainers.value.map(stock => stock.symbol)
+  return allStocks.value.filter(
+    stock => stock.change > 0 && !topGainerSymbols.includes(stock.symbol)
+  )
+})
+
+const fallingStocks = computed(() => {
+  // 筛选出跌幅的股票，按跌幅降序排列
+  return [...allStocks.value]
+    .filter(stock => stock.change < 0)
+    .sort((a, b) => a.change - b.change)
+})
 
 const marketNews = ref([
   {
@@ -190,8 +296,9 @@ const marketNews = ref([
   margin: 0;
 }
 
-.hot-stocks {
+.hot-stocks-container {
   margin-top: 24px;
+  margin-bottom: 24px;
 }
 
 .market-news {
@@ -205,6 +312,13 @@ const marketNews = ref([
   font-size: 1.2rem;
   font-weight: 600;
   color: #223354;
+}
+
+.count-badge {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: normal;
+  margin-left: 8px;
 }
 
 .market-value {
@@ -251,4 +365,13 @@ const marketNews = ref([
   color: #64748b;
   line-height: 1.5;
 }
-</style> 
+
+:deep(.el-table) {
+  font-size: 0.9rem;
+}
+
+:deep(.el-table th) {
+  background-color: #f8fafc;
+  font-weight: 600;
+}
+</style>
