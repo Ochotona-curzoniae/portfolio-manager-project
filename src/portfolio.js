@@ -171,9 +171,12 @@ router.get('/history/simple/:symbol', async (req, res) => {
 
 
 // 查询股票默认接口(默认查询7只股票)
-router.get('/history/simple/symbols', async (req, res) => {
+router.get('/history/simple/symbols/', async (req, res) => {
   try {
-    const result = await getDefaultQuotes();
+    const symbols = [
+    'AAPL', 'GOOGL', 'AMZN', 'MSFT', 'TSLA', ' NVDA', 'META'
+  ];
+    const result = await getDefaultQuotes(symbols);
     res.json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
