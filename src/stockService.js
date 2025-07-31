@@ -155,7 +155,6 @@ export async function getDefaultQuotes(symbols = [
         });
     } catch (error) {
       console.error(`Error fetching data for ${symbol}:`, error.message);
-      return { symbol, error: error.message || 'Failed to fetch stock data' };
     }
   }));
   return results;

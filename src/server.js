@@ -9,7 +9,6 @@ app.use(express.json());
 app.use(express.static("public"));
 app.use('/api', overviewRouter)
 app.use('/api/portfolio', portfolioRouter)
-console.log(app);
 app.get('/api/networth/:days', async (req, res) => {
     try {
       // 3. .THEN/.CATCH EXAMPLE: Alternative to async/await
