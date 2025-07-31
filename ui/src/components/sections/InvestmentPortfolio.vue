@@ -332,10 +332,10 @@ const selectedStockPrice = computed(() => {
 })
 
 const onSubmit = () => {
-  formRef.value.validate(async(valid) => {
+  formRef.value.validate((valid) => {
     if (valid) {
       // 买入股票
-      const res = await axios.post('/api/portfolio/buy', {
+      axios.post('/api/portfolio/buy', {
         userId: 1,
         symbol: form.value.symbol,
         companyName: form.value.companyName,
@@ -343,16 +343,26 @@ const onSubmit = () => {
         price: selectedStockPrice.value,
         bankCardId: form.value.bankCardId
       })
-      if(res.data.success){
-        ElMessage.success('买入成功')
-      }else{
-        ElMessage.error('买入失败')
-      }
-      dialogVisible.value = false
-      getInitData()
+      .then(res => {
+        if (res.data.success) {
+          ElMessage.success('买入成功')
+          dialogVisible.value = false
+          getInitData()
+        } else {
+          ElMessage.error(`买入失败:${res.data.error}`)
+        }
+      })
+      .catch(error => {
+        if (error.response && error.response.data && error.response.data.error) {
+          ElMessage.error(`买入失败:${error.response.data.error}`)
+        } else {
+          ElMessage.error('买入失败: 网络错误或服务器异常')
+        }
+      })
     }
   })
 }
+
 
 // 资产分布饼图数据计算
 function getPieData() {
@@ -552,7 +562,7 @@ const onStockChange = async() => {
     console.log(res.data.data)
     stockHistoryData.value = res.data.data
     updateStockChart()
-    form.value.companyName = stockList.value.find(item => item.symbol === form.value.symbol).companyName
+    form.value.companyName = stockList.value.find(item => item.symbol === form.value.symbol).symbol
   }
 }
 
