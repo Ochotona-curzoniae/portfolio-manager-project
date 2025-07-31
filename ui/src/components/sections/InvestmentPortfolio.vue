@@ -61,7 +61,9 @@
           <span>资产分布</span>
         </div>
       </template>
-      <div id="asset-pie" style="width: 520px; height: 260px; margin: 0 auto;" />
+      <div class="chart-wrapper">
+        <div id="asset-pie" style="width: 520px; height: 260px; margin: 0 auto;" />
+      </div>
     </el-card>
     <!-- 投资列表 -->
     <el-card class="portfolio-list" shadow="hover">
@@ -72,23 +74,26 @@
         </div>
       </template>
 
-      <el-table
-        :data="holdingList"
-        stripe
-        highlight-current-row
-        style="width: 100%;"
-      >
-        <el-table-column prop="symbol" label="股票名称"  />
-        <el-table-column prop="companyName" label="公司名称"  />
+      <div class="table-container">
+        <el-table
+          :data="holdingList"
+          stripe
+          highlight-current-row
+          class="portfolio-table"
+          :header-cell-style="{ background: '#f5f7fa', color: '#303133', fontWeight: '600' }"
+          table-layout="fixed"
+        >
+        <el-table-column prop="symbol" label="股票名称" width="120" />
+        <el-table-column prop="companyName" label="公司名称" width="150" />
 
-        <el-table-column prop="shares" label="持股数量" align="center">
+        <el-table-column prop="shares" label="持股数量" align="center" width="100">
           <template #default="{ row }">
             <el-tag type="info" effect="plain" size="large" style="font-size: 16px; padding: 4px 12px;">
               {{ row.shares }} 股
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="avgPrice" label="均价" align="center">
+        <el-table-column prop="avgPrice" label="均价" align="center" >
           <template #default="{ row }">
             <span style="color: #409EFF; font-weight: bold; font-size: 15px;">
               ￥{{ row.avgPrice }}
@@ -96,7 +101,7 @@
             <span style="color: #999; font-size: 12px;">/股</span>
           </template>
         </el-table-column>
-        <el-table-column prop="currentPrice" label="现价" align="center">
+        <el-table-column prop="currentPrice" label="现价" align="center" >
           <template #default="{ row }">
             <span style="color: #67C23A; font-weight: bold; font-size: 15px;">
               ￥{{ row.currentPrice }}
@@ -104,7 +109,7 @@
             <span style="color: #999; font-size: 12px;">/股</span>
           </template>
         </el-table-column>
-        <el-table-column prop="marketValue" label="市值" align="center">
+        <el-table-column prop="marketValue" label="市值" align="center" >
           <template #default="{ row }">
             <el-tag
               :type="Number(row.marketValue) >= 10 ? 'success' : 'warning'"
@@ -116,14 +121,14 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="gainLossPercent" label="收益率"  align="center">
+        <el-table-column prop="gainLossPercent" label="收益率"  align="center" >
           <template #default="{ row }">
-            <span :class="row.return >= 0 ? 'profit-tag' : 'loss-tag'">
+            <span :class="row.gainLossPercent >= 0 ? 'profit-tag' : 'loss-tag'">
               {{ row.gainLossPercent >= 0 ? '+' : '' }}{{ row.gainLossPercent }}%
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" align="center">
+        <el-table-column label="操作" align="center" >
           <template #default="{ row }">
             <div style="display: flex; justify-content: center; gap: 8px;">
               <el-button
@@ -145,7 +150,8 @@
             </div>
           </template>
         </el-table-column>
-      </el-table>
+              </el-table>
+      </div>
     
     </el-card>
 
@@ -244,7 +250,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, nextTick } from 'vue'
 import { Plus, Refresh, View, Edit } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import axios from 'axios'
@@ -347,28 +353,32 @@ const getInitData = async () => {
     if (res.data && res.data.success && res.data.data) {
       const data = res.data.data
       
-      // 更新响应式数据 - 字段名转换为驼峰
-      holdingList.value = (data.stockHoldings || []).map(item => {
-        return {
-          userId: item.user_id,
-          symbol: item.symbol,
-          companyName: item.company_name,
-          shares: item.shares,
-          avgPrice: Number(item.avg_price).toFixed(2),
-          currentPrice: Number(item.current_price).toFixed(2),
-          marketValue: Number(item.market_value).toFixed(2),
-          gainLoss: item.gain_loss,
-          gainLossPercent: Number(item.gain_loss_percent).toFixed(2),
-          createdAt: item.created_at,
-          updatedAt: item.updated_at
-        }
-      })
-      // 修正：应先找到对应项再取 value
-      cash.value = (data.currentAllocation || []).find(item => item.name === 'cash')?.value.toFixed(2) || 0
-      stocks.value = (data.currentAllocation || []).find(item => item.name === 'stocks')?.value.toFixed(2)  || 0
+      // 批量更新数据，减少重渲染次数
+      await nextTick(() => {
+        // 更新响应式数据 - 字段名转换为驼峰
+        holdingList.value = (data.stockHoldings || []).map(item => {
+          return {
+            userId: item.user_id,
+            symbol: item.symbol,
+            companyName: item.company_name,
+            shares: item.shares,
+            avgPrice: Number(item.avg_price).toFixed(2),
+            currentPrice: Number(item.current_price).toFixed(2),
+            marketValue: Number(item.market_value).toFixed(2),
+            gainLoss: item.gain_loss,
+            gainLossPercent: Number(item.gain_loss_percent).toFixed(2),
+            createdAt: item.created_at,
+            updatedAt: item.updated_at
+          }
+        })
+        
+        // 修正：应先找到对应项再取 value
+        cash.value = (data.currentAllocation || []).find(item => item.name === 'cash')?.value.toFixed(2) || 0
+        stocks.value = (data.currentAllocation || []).find(item => item.name === 'stocks')?.value.toFixed(2)  || 0
 
-      currentAllocation.value = data.currentAllocation || []
-      totalValue.value = Number(data.totalValue || 0).toFixed(2)
+        currentAllocation.value = data.currentAllocation || []
+        totalValue.value = Number(data.totalValue || 0).toFixed(2)
+      })
       
     } else {
       console.error('API返回数据格式不正确:', res.data)
@@ -380,10 +390,22 @@ const getInitData = async () => {
   }
 }
 
+let chart = null
+
 onMounted(() => {
   getInitData()
+  
+  // 延迟初始化图表，确保DOM和数据都已准备好
+  nextTick(() => {
+    initChart()
+  })
+})
 
-  const chart = echarts.init(document.getElementById('asset-pie'))
+const initChart = () => {
+  const chartDom = document.getElementById('asset-pie')
+  if (!chartDom) return
+  
+  chart = echarts.init(chartDom)
   const option = {
     tooltip: { 
       trigger: 'item',
@@ -391,7 +413,7 @@ onMounted(() => {
     },
     legend: {
       orient: 'vertical',
-      right: 30, // 或 bottom: 10
+      right: 30,
       top: 'center',
       textStyle: { fontWeight: 500, color: '#223354' }
     },
@@ -424,13 +446,16 @@ onMounted(() => {
     ]
   }
   chart.setOption(option)
+}
 
-  // 响应式更新
-  watch(holdingList, () => {
+// 响应式更新
+watch([holdingList, cash, stocks], () => {
+  if (chart) {
+    const option = chart.getOption()
     option.series[0].data = getPieData()
     chart.setOption(option)
-  }, { deep: true })
-})
+  }
+}, { deep: true })
 
 const tradeDialogVisible = ref(false)
 const tradeFormRef = ref()
@@ -659,10 +684,12 @@ const onTradeSubmit = () => {
 .portfolio-container {
   width: 100%;
   height: 100%;
+  min-height: 100vh;
   padding: 32px;
   overflow-y: auto;
   background: #f8f9fa;
   position: relative;
+  box-sizing: border-box;
 }
 
 
@@ -775,6 +802,15 @@ const onTradeSubmit = () => {
   margin-top: 20px;
   border-radius: 12px;
   box-shadow: 0 2px 8px #f0f1f2;
+}
+
+.chart-wrapper {
+  height: 260px;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 
@@ -1010,8 +1046,30 @@ const onTradeSubmit = () => {
   padding: 10px;
 }
 
+/* 表格容器样式 */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.portfolio-table {
+  min-width: 1080px;
+  width: 100%;
+}
+
 /* 响应式布局 */
 @media (max-width: 768px) {
+  .portfolio-container {
+    padding: 16px;
+  }
+  
+  .main-title {
+    font-size: 2rem;
+  }
+  
   .investment-dialog {
     width: 95% !important;
   }
@@ -1034,6 +1092,15 @@ const onTradeSubmit = () => {
   .chart-periods {
     width: 100%;
     justify-content: space-between;
+  }
+  
+  .table-container {
+    margin: 0 -16px;
+    border-radius: 0;
+  }
+  
+  .portfolio-table {
+    min-width: 1080px;
   }
 }
 </style> 

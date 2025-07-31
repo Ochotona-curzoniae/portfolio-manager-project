@@ -88,8 +88,8 @@ const initData = async () => {
       totalNetWorth.value = data.totalNetWorth || 0
       investmentValue.value = data.investmentValue || 0
       bankBalance.value = data.bankBalance || 0
-      totalGainLoss.value = data.totalGainLoss || 0
-      gainLossPercent.value = data.gainLossPercent || 0
+      totalGainLoss.value = data.netWorthHistory[data.netWorthHistory.length-1].total_assets-data.netWorthHistory[0].total_assets || 0
+      gainLossPercent.value = totalGainLoss.value/data.netWorthHistory[0].total_assets*100 || 0
       
       // 更新图表数据 - 使用后端返回的 netWorthHistory，并格式化 record_date
       if (data.netWorthHistory && Array.isArray(data.netWorthHistory)) {
@@ -97,7 +97,7 @@ const initData = async () => {
           record_date: item.record_date
             ? new Date(item.record_date).toISOString().slice(0, 10)
             : '',
-          net_worth: item.net_worth
+          net_worth: item.total_assets
         }))
         console.log('更新图表数据:', chartData.value)
       }
